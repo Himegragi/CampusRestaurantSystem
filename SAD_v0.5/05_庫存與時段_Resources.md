@@ -1,8 +1,8 @@
 # 校園點餐系統｜庫存與時段模組
 
-> SAD v0.4｜需求基線 SRS v0.6｜設計審查稿
+> SAD v0.5｜需求基線 SRS v0.6｜設計審查稿
 
-[回 SAD 索引](../校園點餐系統_SAD_v0.4.md) · [上一份：購物車與報價模組](./04_購物車與報價_CartQuote.md) · [下一份：訂單與交易模組](./06_訂單與交易_Orders.md)
+[回 SAD 索引](../校園點餐系統_SAD_v0.5.md) · [上一份：購物車與報價模組](./04_購物車與報價_CartQuote.md) · [下一份：訂單與交易模組](./06_訂單與交易_Orders.md)
 
 負責當日庫存、每日初始化、取餐時段及原保留的耗用與釋回。訂單內部資源操作接受 Orders 提供的同一交易，不自行提交。
 
@@ -16,8 +16,6 @@
 
 ## 時段設定與可預訂查詢
 
-來源：v0.4 FR-004～006、§6.2；停用連動與容量調低依 v0.6 修訂。
-
 | 函式／追溯 | 輸入 | 成功輸出 | 拒絕及一致性處理 |
 | --- | --- | --- | --- |
 | `savePickupSlot`／FR-006 | 日期、起迄、capacity、expectedVersion | slot、occupiedUnits、remaining、version | 至少 10 分鐘、分鐘精度、不重疊且完整落在營業區段；有進行中訂單不能改起迄或刪除，可調低容量 |
@@ -27,8 +25,6 @@
 
 ## 庫存管理與每日初始化
 
-來源：v0.4 FR-007～009；每日庫存及模式切換依 v0.6 修訂。
-
 | 函式／追溯 | 輸入 | 成功輸出 | 拒絕及一致性處理 |
 | --- | --- | --- | --- |
 | `adjustInventory`／FR-009 | productId、mode、availableQuantity、dailyDefaultQuantity、soldOut、expectedVersion | mode、當日 available／reserved／consumed、version | 數量非負整數；不得直接改保留／耗用；模式切換依 [庫存與時段模組](./05_庫存與時段_Resources.md)，衝突 `INVENTORY_MODE_CHANGE_FORBIDDEN` |
@@ -36,8 +32,6 @@
 | `checkAvailability`／FR-009 | 已驗證 items、營業日 | 按商品合計需求與供應判斷 | 同商品不同選項先加總；售完 `PRODUCT_UNAVAILABLE`，有限可用量不足 `INSUFFICIENT_STOCK` |
 
 ## 交易內資源函式
-
-來源：v0.4 FR-014、015、018、§6.4；三張上限、到期與自動取消依 v0.6 補齊。
 
 | 函式／追溯 | 輸入 | 成功輸出 | 拒絕及一致性處理 |
 | --- | --- | --- | --- |
@@ -62,7 +56,7 @@
 
 ## 庫存與容量保留流程圖
 
-來源：v0.4 圖 6-7；追溯：FR-006、009、014、015。
+追溯：FR-006、009、014、015。
 
 ```mermaid
 flowchart TD
@@ -81,7 +75,7 @@ flowchart TD
 
 ## 資源效果流程圖
 
-來源：v0.4 圖 6-11；追溯：FR-016～020、027。
+追溯：FR-016～020、027。
 
 ```mermaid
 flowchart TD
