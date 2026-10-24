@@ -4,7 +4,7 @@ Software Requirements Specification
 
 專案名稱：校園點餐系統 MVP
 
-文件版本：v0.2　　文件日期：2026-10-24　　文件狀態：待審查
+文件版本：v0.3　　文件日期：2026-10-24　　文件狀態：待審查
 
 需求依據：校園點餐系統 Waterfall PRD v0.5（2026-10-23）
 
@@ -16,6 +16,7 @@ Software Requirements Specification
 | --- | --- | --- |
 | v0.1 | 2026-10-23 | 依 PRD v0.5 建立 SRS 初稿，細化功能、狀態、介面及驗證條件 |
 | v0.2 | 2026-10-24 | 加入 5 張 UML 圖、26 項函式輸入輸出與合法非法條件、介面契約、交易偽程式碼及邊界測試設計 |
+| v0.3 | 2026-10-24 | 保留人工修改；依八類功能整理 function 索引及 15 張圖；將送單、資源與狀態命令的偽程式碼改為附說明的函式流程圖 |
 
 
 ---
@@ -27,7 +28,7 @@ Software Requirements Specification
 
 2　功能需求
 
-2.1 帳號與商家管理　2.2 菜單與庫存　2.3 購物車與價格　2.4 訂單與取餐　2.5 通知與管理　2.6 訂單狀態　2.7 資料需求
+2.0 功能分類與 function 索引　2.1 帳號與商家管理　2.2 菜單與庫存　2.3 購物車與價格　2.4 訂單與取餐　2.5 通知與管理　2.6 訂單狀態　2.7 資料需求
 
 3　外部介面需求
 
@@ -39,19 +40,19 @@ Software Requirements Specification
 
 5　名詞與縮寫
 
-6　UML 系統模型
+6　依功能分類的 UML 與流程圖解
 
-6.1 帳號與商品類別圖　6.2 訂單與事件類別圖　6.3 訂單狀態圖　6.4 報價與送單循序圖　6.5 接單與取消競爭循序圖
+6.1 帳號登入與權限　6.2 商家營業與菜單　6.3 購物車與價格確認　6.4 送單去重與資源保留
+
+6.5 接單備餐與取消　6.6 取餐與未取　6.7 訂單查詢與通知　6.8 管理查詢統計與稽核
 
 7　函式契約與實作設計建議
 
-7.1 共通輸入輸出　7.2 錯誤分類　7.3 模組責任　7.4 送單交易　7.5 狀態命令　7.6 資料限制　7.7 邊界與競爭測試　7.8 請求回應範例
+7.1 共通輸入輸出　7.2 錯誤分類　7.3 模組責任　7.4 資料限制　7.5 邊界與競爭測試　7.6 請求回應範例
 
 附錄 A　需求追溯與驗收
 
 附錄 B　需求審查決議清單
-
-閱讀方式：FR 與 NFR 編號沿用 PRD。每項功能下的「驗證」是驗收情境摘要，正式測試步驟、資料與結果由測試文件記錄。附錄 B 所列項目尚未決議，不得視為已核准的新需求。
 
 ---
 # 1 簡介
@@ -61,8 +62,6 @@ Software Requirements Specification
 本系統為單一校園使用的繁體中文響應式網站，提供學生、商家及管理員三種操作介面。MVP 包含電子郵件驗證登入、帳號與商家管理、菜單與庫存、單商家購物車、當日取餐時段、訂單處理、站內通知、基本統計及操作紀錄。
 
 學生透過網站預訂餐點，商家依訂單備餐並於現場核對取餐碼交付。付款屬線下作業；系統不得提供付款、退款、收款狀態、財務對帳或財務報表。訂單金額僅表示餐點價格合計，完成訂單不代表已付款。
-
-本版不擴充至多校園、多語系、跨店合併購物車、跨日預訂或配送。這些項目不屬本次 PRD 定義的 MVP 範圍。
 
 ## 1.2 產品特色
 
@@ -96,6 +95,21 @@ Software Requirements Specification
 各功能均須在伺服器端驗證身分、資料存取權限及適用條件。失敗操作不得顯示為成功；對訂單、庫存及容量的變更須遵循第 2.6 節。以下驗證情境編號 AC-001 至 AC-026 與相同尾碼的 FR 一對一對應。
 
 每項 FR 新增函式與介面提案、輸入欄位與合法值、成功輸出、非法輸入與業務例外，以及實作方向。英文函式、欄位、路徑、HTTP 狀態與資料結構為設計建議；待核定的政策不因出現在範例或 UML 中就視為定案。共通型別、錯誤處理與交易原則見第 7 章。
+
+## 2.0 功能分類與 function 索引
+
+為方便按功能閱讀，以下將現有 26 項需求分成八類；FR 編號與原功能敘述保留。第 2.1 至 2.5 節仍提供完整輸入輸出與錯誤規格，第 6 章使用相同八類編排圖解。跨功能共用的 function 可在多張圖出現，不代表要重複實作。
+
+| 功能分類 | 對應需求 | 主要 function | 圖解位置 |
+| --- | --- | --- | --- |
+| A 帳號登入與權限 | FR-001～FR-003 | `requestEmailVerification()`、`verifyEmailAndLogin()`、`createPrivilegedAccount()`、`authorize()`、`changeAccountStatus()` | 6.1 圖 6 1 |
+| B 商家營業與菜單 | FR-004～FR-009 | `createMerchant()`、`updateMerchant()`、`updateBusinessSchedule()`、`canAcceptOrders()`、`savePickupSlot()`、`listBookableSlots()`、`createProduct()`、`updateProduct()`、`configureOptions()`、`validateSelections()`、`adjustInventory()`、`checkAvailability()` | 6.2 圖 6 2 至 6 3 |
+| C 購物車與價格確認 | FR-010～FR-013 | `addCartItem()`、`updateCartItem()`、`removeCartItem()`、`switchCartMerchant()`、`calculatePrice()`、`quoteOrder()`、`validateAcceptedQuote()`、`buildOrderSnapshot()` | 6.3 圖 6 4 |
+| D 送單去重與資源保留 | FR-014～FR-015；共用 FR-018 | `createOrder()`、`executeIdempotently()`、`applyCancellationResources()` | 6.4 圖 6 5 至 6 8 |
+| E 接單備餐與取消 | FR-016～FR-018 | `acceptOrder()`、`markOrderReady()`、`cancelStudentOrder()`、`rejectOrCancelMerchantOrder()`、`applyCancellationResources()`；共用內部 `applyOrderCommand()` | 6.5 圖 6 9 至 6 12 |
+| F 取餐與未取 | FR-019～FR-020 | `completePickup()`、`markUncollected()` | 6.6 圖 6 13 |
+| G 訂單查詢與通知 | FR-021～FR-023 | `listMyOrders()`、`getOrderDetail()`、`createNotificationsFromOrderEvent()`、`listNotifications()`、`loadMerchantOrderBoard()`、`refreshOrderBoard()` | 6.7 圖 6 14 |
+| H 管理查詢統計與稽核 | FR-024～FR-026 | `searchOrders()`、`getOperationalStatistics()`、`appendAuditEvent()`、`searchAuditEvents()` | 6.8 圖 6 15 |
 
 ## 2.1 帳號與商家管理
 
@@ -464,7 +478,7 @@ Software Requirements Specification
 
 #### 函式規格與實作方向
 
-**建議函式與介面：**`createOrder(actor,request,input)`；`POST /orders`。詳細循序圖見第 6.4 節，交易流程見第 7.4 節。
+**建議函式與介面：**`createOrder(actor,request,input)`；`POST /orders`。函式流程圖見第 6.4 節圖 6 5 至 6 7，交易邊界導讀見第 7.4 節。
 
 | 輸入 | 型別與必要性 | 合法條件與驗證 |
 | --- | --- | --- |
@@ -977,37 +991,131 @@ NFR-006 易用性：主要操作須有明確標籤、錯誤提示及操作結果
 
 ---
 
-# 6 UML 系統模型
+# 6 依功能分類的 UML 與流程圖解
 
-以下使用 Mermaid 語法表達 UML 類別圖、狀態圖與循序圖，可在支援 Mermaid 的 Markdown 檢視器或 GitHub 預覽。類別名稱、屬性與方法為邏輯設計提案，不代表已選定語言、框架或資料庫；附錄 B 的未決政策仍優先。圖中不包含付款實體或支付流程。
+本章以功能分組呈現，不要求讀者先理解資料庫或交易程式碼。每組先列出主要 function、輸入與輸出，再說明流程圖中的判斷與失敗結果。function 名稱對應第 2 章的設計提案；圖中的內部協作函式另以文字註明，並不代表新增對外 API。
 
-## 6.1 帳號與商品類別圖
+圖表使用 Mermaid。`classDiagram`、`stateDiagram-v2`、`sequenceDiagram` 分別表達 UML 類別、狀態與循序模型；`flowchart` 為補充的函式流程圖，取代原本的 pseudocode，不將一般流程圖稱作 UML 圖。
 
-本圖對應 FR-001 至 FR-009。User 與 Merchant 的直接關聯表示商家帳號的歸屬提案；是否一帳號可管理多店仍待 B-02。商品供應狀態與有限／不限量庫存分開，避免把不限量誤當作永遠可售。
+**讀圖方式：**方框表示執行 function 或顯示結果，菱形表示檢查 function 的結果，箭頭文字表示分支條件。圖中的「拒絕」不表示可以忽略錯誤：必須回傳對應錯誤、維持業務資料一致，並按規格保留必要紀錄。交易框內的變更只有全部提交成功才生效。
+
+**命名方式：**主要 function 保留第 2 章的名稱，例如 `createOrder()`、`acceptOrder()`；`validateInputShapeAndLimits()` 等為支援主要 function 的內部協作函式。以下圖解仍屬設計提案，容量單位、取餐碼、通知收件人及接單後容量釋回等未決事項，仍以附錄 B 的核定結果為準。
+
+## 6.1 帳號登入與權限
+
+**對應需求：**FR-001 至 FR-003。學生透過驗證取得身分；授權人員管理帳號；所有受保護功能都檢查當前權限與啟停狀態。
+
+| 主要 function | 輸入 | 成功輸出 | 關鍵限制 |
+| --- | --- | --- | --- |
+| `requestEmailVerification()` | email | challengeId、expiresAt、寄送結果 | 寄送失敗不可當成驗證成功 |
+| `verifyEmailAndLogin()` | challengeId、proof | 使用者資料與登入工作階段 | proof 正確、有效且尚未使用；帳號有效 |
+| `createPrivilegedAccount()` | actor、角色與帳號資料 | 新建商家或管理員帳號 | 建立者須有授權；不可自行提升權限 |
+| `authorize()` | actor、action、resource | 允許或拒絕 | 同時檢查角色與資料歸屬 |
+| `changeAccountStatus()` | accountId、status、expectedVersion | 新狀態與版本 | 停用後既有登入的後續請求亦須拒絕 |
+
+### 圖 6 1 電子郵件登入循序圖
+
+```mermaid
+sequenceDiagram
+autonumber
+actor Student as 學生
+participant UI as 登入畫面
+participant Auth as 身分驗證服務
+participant Mail as 郵件服務
+participant Store as 帳號與驗證資料
+Student->>UI: 輸入 email
+UI->>Auth: requestEmailVerification(email)
+Auth->>Auth: validateEmail(email)
+alt 信箱格式或核定網域不合法
+  Auth-->>UI: VALIDATION_ERROR
+else 信箱通過檢查
+  Auth->>Store: saveVerificationChallenge(email)
+  Auth->>Mail: sendVerificationMessage(challenge)
+  alt 郵件服務失敗
+    Auth-->>UI: DEPENDENCY_UNAVAILABLE 不建立登入
+  else 寄送成功
+    Auth-->>UI: challengeId 與 expiresAt
+    Student->>UI: 提供 proof
+    UI->>Auth: verifyEmailAndLogin(challengeId, proof)
+    Auth->>Store: validateAndConsumeChallenge(challengeId, proof)
+    alt proof 錯誤或過期或已使用
+      Auth-->>UI: VERIFICATION_INVALID 或 VERIFICATION_EXPIRED_OR_USED
+    else proof 有效
+      Auth->>Auth: requireActiveAccount(account)
+      alt 帳號停用或不符合核定註冊政策
+        Auth-->>UI: 拒絕登入
+      else 帳號可登入
+        Auth->>Auth: createSession(account)
+        Auth-->>UI: user 與登入工作階段
+      end
+    end
+  end
+end
+```
+
+**圖解說明：**`requestEmailVerification()` 只核發並寄送驗證挑戰，不代表已登入。`verifyEmailAndLogin()` 才負責驗證 proof 與建立工作階段。`validateAndConsumeChallenge()` 是內部函式，驗證成功與標記已使用須原子處理，因此同一 proof 不能同時登入兩次；未註冊帳號如何建立仍依 B-01。每次存取訂單或管理功能都需再次執行身分有效性及 `authorize()`，不能因曾經登入就略過停用檢查。
+
+## 6.2 商家營業與菜單管理
+
+**對應需求：**FR-004 至 FR-009。此類功能維護「之後可供下單的設定」，不修改已成立訂單的商品與價格快照。
+
+| 主要 function | 管理資料 | 成功輸出 | 必要檢查 |
+| --- | --- | --- | --- |
+| `createMerchant()`、`updateMerchant()` | 商家名稱、位置、聯絡、取餐說明及啟停 | 商家資料與版本 | 管理範圍、欄位格式與版本 |
+| `updateBusinessSchedule()`、`canAcceptOrders()` | 營業時間、休息日、接單開關 | 新設定或當下可否接單 | 使用伺服器時間及校園時區 |
+| `savePickupSlot()`、`listBookableSlots()` | 當日取餐時段與容量 | 時段設定或可預訂清單 | 日期、起迄、容量及已占用量 |
+| `createProduct()`、`updateProduct()` | 商品、圖片、價格、上下架 | 商品資料與版本 | 商家歸屬、格式與可售條件 |
+| `configureOptions()`、`validateSelections()` | 選項群組與加價 | 選項設定或有效選擇 | 必選／可選及商品歸屬 |
+| `adjustInventory()`、`checkAvailability()` | 有限／不限量、可用量、售完 | 庫存設定或供應判斷 | 不得負值；模式切換依 B-05 |
+
+### 圖 6 2 管理設定的共通更新流程
+
+```mermaid
+flowchart TD
+  A["管理畫面送出設定<br/>actor、input、expectedVersion"] --> B{"authorize(actor, action, resource)<br/>有操作與資料範圍權限？"}
+  B -->|否| E1["FORBIDDEN 或 RESOURCE_NOT_FOUND<br/>不修改資料"]
+  B -->|是| C{"validateManagementInput(input)<br/>必填、型別與業務條件合法？"}
+  C -->|否| E2["VALIDATION_ERROR<br/>顯示需修正的欄位"]
+  C -->|是| D{"選擇本次管理功能"}
+  D -->|商家資料| M["createMerchant() / updateMerchant()"]
+  D -->|營業與接單| H["updateBusinessSchedule()"]
+  D -->|取餐時段| S["savePickupSlot()"]
+  D -->|商品資料| P["createProduct() / updateProduct()"]
+  D -->|選項規則| O["configureOptions()"]
+  D -->|庫存與售完| I["adjustInventory()"]
+  M --> V
+  H --> V
+  S --> V
+  P --> V
+  O --> V
+  I --> V
+  V{"validateAndPersistManagementChange()<br/>交易內版本及資源限制仍成立？"} -->|否| E3["VERSION_CONFLICT 或業務錯誤<br/>回滾並要求重新讀取"]
+  V -->|是| L["appendAuditEvent()<br/>保存重要異動"]
+  L --> K["commitTransaction()<br/>設定與必要紀錄一起提交"]
+  K --> R["回傳新資料與 version<br/>畫面才顯示儲存成功"]
+```
+
+**圖解說明：**這是多個管理 function 共用的檢查模式，不表示一次呼叫會同時修改六種設定。每次只走一條功能分支；新增資料不要求舊版本，修改資料才檢查 `expectedVersion`。`validateManagementInput()` 與 `validateAndPersistManagementChange()` 為內部協作函式，仍需在各功能中檢查特有條件，例如時段容量不可低於核定規則下的占用量、有限庫存不可負值。重要紀錄或提交失敗時，不得顯示成功；無法確認提交結果時先重新讀取，不能假設變更未生效。
+
+### 圖 6 3 帳號商家與商品類別圖
 
 ```mermaid
 classDiagram
 direction TB
 class User {
   +ID id
-  +String email
   +Role role
   +AccountStatus status
-  +Integer version
 }
 class Merchant {
   +ID id
-  +String name
-  +String location
   +MerchantStatus status
   +Boolean acceptingOrders
-  +canAcceptOrders(now) Boolean
 }
 class BusinessSchedule {
   +String timezone
   +WeeklyHours weeklyHours
   +DateList closedDates
-  +isOpen(now) Boolean
 }
 class Product {
   +ID id
@@ -1016,28 +1124,20 @@ class Product {
   +Boolean listed
   +Boolean soldOut
   +Integer version
-  +validateSelections(ids) Result
 }
 class OptionGroup {
   +ID id
-  +String name
   +Boolean required
 }
 class ProductOption {
   +ID id
   +String name
   +Money extraPrice
-  +Boolean enabled
 }
 class Inventory {
-  +ID productId
   +InventoryMode mode
   +Integer availableQuantity
   +Integer reservedQuantity
-  +Integer version
-  +reserve(quantity) Result
-  +release(quantity) Result
-  +consumeReservation(quantity) Result
 }
 class PickupSlot {
   +ID id
@@ -1045,23 +1145,144 @@ class PickupSlot {
   +Timestamp endAt
   +Integer capacity
   +Integer occupiedUnits
-  +Integer version
-  +occupy(units) Result
 }
 Merchant "0..1" -- "0..*" User : merchant membership proposal
-Merchant "1" *-- "1" BusinessSchedule : schedule
-Merchant "1" -- "0..*" Product : offers
-Product "1" *-- "0..*" OptionGroup : defines
-OptionGroup "1" *-- "1..*" ProductOption : contains
-Product "1" *-- "1" Inventory : availability
-Merchant "1" -- "0..*" PickupSlot : offers
+Merchant "1" *-- "1" BusinessSchedule : updateBusinessSchedule()
+Merchant "1" -- "0..*" Product : createProduct()
+Product "1" *-- "0..*" OptionGroup : configureOptions()
+OptionGroup "1" *-- "1..*" ProductOption : configureOptions()
+Product "1" *-- "1" Inventory : adjustInventory()
+Merchant "1" -- "0..*" PickupSlot : savePickupSlot()
 ```
 
-圖中的組合關係表示邏輯所有權，不表示可級聯刪除歷史紀錄。無選項的商品不需 OptionGroup；群組若暫無選項應以草稿處理，不能讓必選群組無合法值卻仍可上架。不限量商品的可用量可為 null；庫存模式轉換須符合 B-05。
+**圖解說明：**線旁的 function 表示哪個功能建立或維護此關聯，不是類別之間執行順序。`1` 表示恰一個，`0..*` 表示零到多個；沒有選項的商品可以沒有 OptionGroup。組合關係表示邏輯所有權，不授權刪除歷史訂單。商家帳號可否管理多店仍待 B-02；庫存不限量時數量可為 null，售完仍不可送單。
 
-## 6.2 訂單與事件類別圖
+## 6.3 購物車與價格確認
 
-本圖對應 FR-010、FR-014 至 FR-026。OrderItem 與 OptionSnapshot 保存成立時資料；Submission 保存同一次送單的結果；Reservation 保存實際保留與釋回依據。這些設計讓重試、取消及商品改價不會改變既有交易結果。
+**對應需求：**FR-010 至 FR-013；快照由正式送單呼叫建立，購物車及報價階段不保留資源。
+
+| 主要 function | 做什麼 | 結果 |
+| --- | --- | --- |
+| `addCartItem()`、`updateCartItem()`、`removeCartItem()` | 維護同店的餐點、數量、選項與備註 | 更新後購物車 |
+| `switchCartMerchant()` | 跨商家前取得確認 | 確認才清除舊內容；拒絕則維持原購物車 |
+| `calculatePrice()` | 以有效單價、加價與數量計算 | 每行小計與訂單合計 |
+| `quoteOrder()` | 重新檢查明細並提供報價 | quoteId、明細、差異提示 |
+| `validateAcceptedQuote()` | 送單時確認報價仍對應同一內容與價格 | 通過或 QUOTE_CHANGED |
+| `buildOrderSnapshot()` | 成立訂單時固定名稱、選項、數量及價格 | 不隨菜單改動的訂單快照 |
+
+### 圖 6 4 購物車至確認報價的函式流程
+
+```mermaid
+flowchart TD
+  A["學生選擇商品與選項"] --> B{"switchCartMerchant()<br/>需要更換商家？"}
+  B -->|否 同商家或空購物車| V
+  B -->|是| C{"學生是否確認切換？"}
+  C -->|否| STOP["維持原購物車<br/>不加入新商家商品"]
+  C -->|是| CLEAR["switchCartMerchant(confirmed=true)<br/>清除舊商家內容"]
+  CLEAR --> V
+  V{"validateSelections()<br/>選項規則符合？"} -->|否| BAD["OPTION_RULE_VIOLATION<br/>提示修正選項"]
+  V -->|是| ADD["addCartItem() / updateCartItem()<br/>數量必須是正整數"]
+  ADD --> CART["calculatePrice()<br/>顯示購物車明細與合計"]
+  CART --> Q["quoteOrder()<br/>後端重新檢查商品與有效價格"]
+  Q --> QC{"商品與選項仍有效？"}
+  QC -->|否| FIX["提示不可售或資料變更<br/>回到購物車修正"]
+  QC -->|是| CONFIRM["顯示 quoteId 對應明細<br/>變價時顯示新舊差異"]
+  CONFIRM --> YES{"學生明確接受此報價？"}
+  YES -->|否| CART
+  YES -->|是| SUBMIT["createOrder(acceptedQuoteId)<br/>進入圖 6 5 的正式送單"]
+```
+
+**圖解說明：**`calculatePrice()` 的前端顯示不是正式成交依據，後端仍需重新計算。學生接受 quoteId 後，若正式送單時價格又改變，`validateAcceptedQuote()` 應拒絕並要求再次確認；不能只比較總額，也要確認品項、選項與數量。`removeCartItem()` 可在購物車階段刪除明細後重新計算，本圖以新增與修改為主要路徑。`buildOrderSnapshot()` 只在送單成功交易內執行，避免把尚未確認的價格寫成歷史訂單。
+
+## 6.4 送單去重與資源保留
+
+**對應需求：**FR-014、FR-015、FR-018、NFR-002。將原 `createOrder()` 偽程式碼拆成「辨識同一次操作」「建立訂單交易」「保留資源」三張圖，避免單圖同時擠入所有例外。
+
+| function | 角色 | 輸入與結果 |
+| --- | --- | --- |
+| `createOrder()` | 主要入口 | actor、key、商家、時段、items、acceptedQuoteId → 訂單或明確結果 |
+| `executeIdempotently()` | 操作去重協作函式 | actor、key、requestHash、command → 原結果、處理中或執行一次 |
+| `buildOrderSnapshot()` | 快照建立 | 通過驗證的報價與品項 → 訂單明細快照 |
+| `reserveFiniteInventoryConditionally()` | 內部資源函式 | 按商品彙總的需求 → 庫存保留成功或不足 |
+| `occupySlotConditionally()` | 內部資源函式 | slot、核定單位的 units → 容量占用成功或額滿 |
+| `applyCancellationResources()` | 取消時的內部函式 | 訂單、原狀態、核定政策 → 原保留釋回或維持已耗用 |
+
+### 圖 6 5 createOrder 與同一次送單辨識
+
+```mermaid
+flowchart TD
+  A["createOrder(actor, key, input)<br/>送單入口"] --> V["requireActiveStudent()<br/>validateInputShapeAndLimits()"]
+  V --> CHECK{"身分與輸入合法？"}
+  CHECK -->|否| E["回傳身分或欄位錯誤<br/>不建立訂單"]
+  CHECK -->|是| HASH["normalizeWithoutChangingMeaning()<br/>計算 requestHash"]
+  HASH --> IDEM["executeIdempotently(actor, key, requestHash, command)<br/>取得或讀取送單紀錄"]
+  IDEM --> SAME{"key 已存在但內容不同？"}
+  SAME -->|是| REUSE["IDEMPOTENCY_KEY_REUSED<br/>不得覆寫舊操作"]
+  SAME -->|否| STATE{"送單紀錄狀態？"}
+  STATE -->|SUCCEEDED| SUCCESS["savedCreationResult()<br/>回傳原 orderId 不另建新單"]
+  STATE -->|FAILED 且原因已確定| FAILURE["savedFailure()<br/>回傳原業務拒絕結果"]
+  STATE -->|PROCESSING 由其他有效執行者持有| WAIT["回傳 202 PROCESSING<br/>沿用原 key 查詢"]
+  STATE -->|新操作或合法取得恢復處理權| TX["executeOrderCreationTransaction()<br/>進入圖 6 6"]
+  TX --> RESULT["savedSubmissionResult()<br/>回傳已提交結果"]
+```
+
+**圖解說明：**`key` 識別「這一次送單」，`requestHash` 識別「這次送單的內容」。雙擊或網路重送必須使用同 key 與同內容，才可拿回原結果。已確定失敗後，學生修改草稿並重新確認，才建立新操作與新 key。結果未知或執行者當機時，先查持久紀錄並取得恢復處理權，不能只因等太久就另建訂單。`executeOrderCreationTransaction()` 是內部函式，對應下一張圖。
+
+### 圖 6 6 executeOrderCreationTransaction 建立訂單交易
+
+```mermaid
+flowchart TD
+  A["executeOrderCreationTransaction(claim, actor, input)"] --> BEGIN
+  subgraph TX["同一資料庫交易：完整成功才提交訂單"]
+    BEGIN["beginTransaction()<br/>lockSubmissionAndVerifyAttemptOwnership()<br/>建立 businessWork 儲存點"] --> AUTH["recheckActorActiveAndAuthorized()<br/>再次確認帳號有效"]
+    AUTH --> MER["lockMerchantForOrderValidation()<br/>canAcceptOrders(merchant, serverClock.now())"]
+    MER --> SLOT["lockSlot()<br/>requireSlotBelongsToMerchantAndBookableToday()"]
+    SLOT --> PROD["lockRelevantProductsInStableOrder()<br/>validateAllProductsSelectionsAndPositiveQuantities()<br/>requireAllItemsBelongToOneMerchant()"]
+    PROD --> PRICE["calculatePrice()<br/>validateAcceptedQuote()"]
+    PRICE --> PASS{"以上檢查是否全部通過？"}
+    PASS -->|否 明確業務拒絕| ROLLBACK["rollbackToSavepoint(businessWork)<br/>撤銷本次業務變更"]
+    PASS -->|是| RESOURCE["reserveOrderResources()<br/>進入圖 6 7"]
+    RESOURCE --> ENOUGH{"所有庫存與時段保留成功？"}
+    ENOUGH -->|否| ROLLBACK
+    ENOUGH -->|是| SNAP["buildOrderSnapshot()<br/>insertOrderAndImmutableSnapshots()<br/>狀態 PENDING_ACCEPTANCE"]
+    SNAP --> RECORD["insertReservationRecords()<br/>insertOrderEventAndRequiredAudit()<br/>insertRequiredOutboxEvents()"]
+    RECORD --> OK["markSubmissionSucceeded()<br/>綁定原 key 與 orderId"]
+    ROLLBACK --> FAIL["markSubmissionFailed()<br/>保存確定的業務錯誤"]
+    OK --> COMMIT["commitTransaction()"]
+    FAIL --> COMMIT
+  end
+  COMMIT --> DONE["savedSubmissionResult()<br/>成功回傳訂單 或回傳確定錯誤"]
+  BEGIN -.-> UNKNOWN["交易中出現系統故障或提交結果不明"]
+  COMMIT -.-> UNKNOWN
+  UNKNOWN --> RECOVER["recoverSubmissionResult(actor, key)<br/>先查提交結果 不立即改用新 key"]
+```
+
+**圖解說明：**由上往下依序檢查帳號、商家、時段、商品、選項與價格；每個驗證函式一旦拒絕，就直接走回滾分支，不再執行後續寫入。圖中的集中菱形用來簡化呈現，並非等所有驗證都執行完才處理已發現的錯誤。
+
+`reserveOrderResources()` 成功後，才建立訂單快照與事件；它仍在同一交易內，若後續任何必要寫入失敗，資源保留也必須回滾。`markSubmissionFailed()` 僅適用於庫存不足、額滿、報價變更等已知業務拒絕；資料庫斷線或 commit 回覆遺失，不等於已知失敗。
+
+虛線代表整個交易期間都可能發生的系統故障，不只起點或提交兩處。`recoverSubmissionResult()` 是內部恢復函式：能確定尚未提交時回滾；無法確定時保留同 key 查核，禁止直接重建。寄信及推送由已提交事件驅動，不放進此交易等待完成。
+
+### 圖 6 7 reserveOrderResources 庫存與容量一起保留
+
+```mermaid
+flowchart TD
+  A["reserveOrderResources(items, slot, approvedPolicy)"] --> SUM["aggregateQuantityByProduct(items)<br/>同商品不同選項先合計數量"]
+  SUM --> UNITS["capacityUnits(input, approvedPolicy)<br/>依核定容量單位計算需求"]
+  UNITS --> STOCK["reserveFiniteInventoryConditionally(needs)<br/>每項有限庫存須足夠<br/>available 減少 reserved 增加"]
+  STOCK --> SOK{"所有有限庫存更新成功？"}
+  SOK -->|否| BAD["INSUFFICIENT_STOCK<br/>交由外層交易回滾全部暫時保留"]
+  SOK -->|是| SLOT["occupySlotConditionally(slot, units)<br/>occupied 加需求不得超過 capacity"]
+  SLOT --> COK{"時段容量更新成功？"}
+  COK -->|否| FULL["SLOT_FULL<br/>連同剛才的庫存保留一起回滾"]
+  COK -->|是| OK["回傳完整保留結果<br/>由外層寫入 Reservation 與訂單"]
+```
+
+**圖解說明：**例如同商品分成兩行、各兩份，須按四份檢查，不能各自通過兩份檢查就超賣。商品保留成功而時段失敗時，前面的商品保留也要撤銷。不限量商品不扣有限數字，但仍需通過上架、供應及售完檢查。時段需求不得直接假設「每單一份」，須依 B-04。
+
+這張圖取代原 SQL 範例，重點是條件更新及整單回滾，不限定資料庫語法。`reserveOrderResources()` 為內部協作函式，不提供前端直接占庫存或占容量的 API。
+
+### 圖 6 8 訂單快照保留與事件類別圖
 
 ```mermaid
 classDiagram
@@ -1071,22 +1292,17 @@ class Order {
   +ID studentId
   +ID merchantId
   +ID pickupSlotId
-  +Timestamp pickupStartAt
   +Timestamp pickupEndAt
   +OrderStatus status
   +Money total
-  +String pickupCode
   +Integer version
-  +apply(command) Result
 }
 class OrderItem {
-  +ID id
   +ID sourceProductId
   +String productName
   +Money basePrice
   +Integer quantity
   +Money subtotal
-  +String note
 }
 class OptionSnapshot {
   +ID sourceOptionId
@@ -1099,12 +1315,10 @@ class Submission {
   +String requestHash
   +SubmissionStatus status
   +ID orderId
-  +String resultCode
 }
 class Reservation {
-  +ID id
-  +ResourceType resourceType
   +ID resourceId
+  +ResourceType resourceType
   +Integer quantity
   +ReservationStatus status
 }
@@ -1112,48 +1326,41 @@ class OrderEvent {
   +ID id
   +OrderStatus fromStatus
   +OrderStatus toStatus
-  +ID actorId
   +Timestamp occurredAt
-  +String reason
 }
 class OutboxEvent {
   +ID eventId
-  +String eventType
-  +Timestamp occurredAt
   +DeliveryStatus deliveryStatus
 }
 class Notification {
-  +ID id
   +ID recipientId
   +ID eventId
-  +String message
-  +Timestamp occurredAt
 }
 class AuditEvent {
-  +ID id
   +ID actorId
   +ID targetId
   +String action
   +String result
-  +Timestamp occurredAt
 }
-Submission "1" -- "0..1" Order : creates at most one
-Order "1" *-- "1..*" OrderItem : immutable snapshot
-OrderItem "1" *-- "0..*" OptionSnapshot : selected options
-Order "1" -- "1..*" Reservation : resource records
-Order "1" -- "1..*" OrderEvent : history
-OrderEvent "1" -- "0..1" OutboxEvent : notification source
-OutboxEvent "1" -- "0..*" Notification : recipients
-Order "1" -- "0..*" AuditEvent : important changes
+Submission "1" -- "0..1" Order : executeIdempotently()
+Order "1" *-- "1..*" OrderItem : buildOrderSnapshot()
+OrderItem "1" *-- "0..*" OptionSnapshot : buildOrderSnapshot()
+Order "1" -- "1..*" Reservation : reserveOrderResources()
+Order "1" -- "1..*" OrderEvent : applyOrderCommand()
+OrderEvent "1" -- "0..1" OutboxEvent : appendNotificationOutboxIfRequired()
+OutboxEvent "1" -- "0..*" Notification : createNotificationsFromOrderEvent()
+Order "1" -- "0..*" AuditEvent : appendAuditEvent()
 ```
 
-SubmissionStatus 的 PROCESSING、SUCCEEDED、FAILED 與 OrderStatus 六種狀態分屬不同模型。Reservation 對有限庫存可用 RESERVED、CONSUMED、RELEASED；時段是否在接單後釋回依 B-09，不能直接套用庫存狀態。Outbox 可與持久訂單事件合併實作，只要可靠派送及去重效果相同。
+**圖解說明：**Submission 對 Order 的 `0..1` 表示同次送單可以尚未成立、失敗，或最多成立一單。OrderEvent 的第一筆由 `createOrder()` 建立，後續由 `applyOrderCommand()` 追加；線旁函式是主要維護者，不排除建立階段。OrderItem 與 OptionSnapshot 是快照，不從新菜單重算歷史訂單。Reservation 記錄「原本保留多少」，取消時以它釋回，不能看目前購物車推算。
 
-User、Merchant、PickupSlot 的關聯在第 6.1 節定義；此處以外鍵屬性指向該實體，避免單張圖過於擁擠。每張訂單有一位學生、一家商家及一個取餐時段。AuditEvent 亦可指向帳號、商家及商品，圖中僅展開訂單關係。
+通知與 AuditEvent 均是可追溯資料；通知失敗不重跑訂單變更。庫存保留的 RESERVED、CONSUMED、RELEASED 與時段占用的處理需分清，接單後時段政策仍待 B-09。
 
-## 6.3 訂單狀態圖
+## 6.5 商家接單備餐與取消
 
-本圖是第 2.6 節轉換表的視覺表達。授權、版本、資源一致性及事件紀錄適用於每個轉換。終止狀態通向結束節點，沒有回復箭頭；超時不會自動標記未取，仍由商家操作。
+**對應需求：**FR-016 至 FR-018。`acceptOrder()`、`markOrderReady()`、`cancelStudentOrder()`、`rejectOrCancelMerchantOrder()` 是用途明確的入口，內部共用 `applyOrderCommand()`，但各入口有不同角色與狀態限制。
+
+### 圖 6 9 訂單狀態與 function 對照
 
 ```mermaid
 stateDiagram-v2
@@ -1163,112 +1370,226 @@ state "可取餐" as READY_FOR_PICKUP
 state "已完成" as COMPLETED
 state "已取消" as CANCELLED
 state "未取" as UNCOLLECTED
-[*] --> PENDING_ACCEPTANCE : 整單驗證與保留成功
-PENDING_ACCEPTANCE --> PREPARING : 所屬商家接單
-PENDING_ACCEPTANCE --> CANCELLED : 本人學生取消或商家拒單
-PREPARING --> READY_FOR_PICKUP : 商家標記備妥
-PREPARING --> CANCELLED : 商家無法供應且提供原因
-READY_FOR_PICKUP --> CANCELLED : 商家無法供應且提供原因
-READY_FOR_PICKUP --> COMPLETED : 商家核對碼且確認實際交付
-READY_FOR_PICKUP --> UNCOLLECTED : 商家標記且已超過時段且未交付
+[*] --> PENDING_ACCEPTANCE : createOrder()
+PENDING_ACCEPTANCE --> PREPARING : acceptOrder()
+PENDING_ACCEPTANCE --> CANCELLED : cancelStudentOrder() 或 rejectOrCancelMerchantOrder(REJECT)
+PREPARING --> READY_FOR_PICKUP : markOrderReady()
+PREPARING --> CANCELLED : rejectOrCancelMerchantOrder(MERCHANT_CANCEL)
+READY_FOR_PICKUP --> CANCELLED : rejectOrCancelMerchantOrder(MERCHANT_CANCEL)
+READY_FOR_PICKUP --> COMPLETED : completePickup()
+READY_FOR_PICKUP --> UNCOLLECTED : markUncollected()
 COMPLETED --> [*]
 CANCELLED --> [*]
 UNCOLLECTED --> [*]
-note right of CANCELLED
-  待確認時取消或拒單釋回原保留
-  接單後取消不自動補回已耗用庫存
-  接單後時段政策仍待 B-09
-end note
 ```
 
-## 6.4 報價與送單循序圖
+| function 與動作 | 必要條件 | 成功狀態與資源效果 |
+| --- | --- | --- |
+| `acceptOrder()` | 所屬商家；待確認 | PREPARING；原有限庫存保留轉耗用，不再扣一次可用量 |
+| `markOrderReady()` | 所屬商家；製作中且已備妥 | READY_FOR_PICKUP；保存 readyAt |
+| `cancelStudentOrder()` | 本人；仍待確認 | CANCELLED；釋回原有限庫存與時段保留一次 |
+| `rejectOrCancelMerchantOrder(REJECT)` | 所屬商家；待確認；有原因 | CANCELLED；釋回原保留一次 |
+| `rejectOrCancelMerchantOrder(MERCHANT_CANCEL)` | 所屬商家；製作中或可取餐；無法供應且有原因 | CANCELLED；不補回已耗用庫存，時段依 B-09 |
+| `completePickup()` | 所屬商家；可取餐；核對碼且確認交付 | COMPLETED；保存 completedAt |
+| `markUncollected()` | 所屬商家；可取餐；嚴格超過時段且未交付 | UNCOLLECTED；保存 uncollectedAt 並保留 readyAt |
 
-本圖對應 FR-010 至 FR-015、FR-022 及 FR-023。報價不占用資源，送單提交後才成立；重播成功請求直接取得原訂單，不重新計價並另建新單。
+**圖解說明：**線上顯示的是觸發轉換的 function，不能把箭頭當作無條件允許。必須同時滿足表中的身分、狀態、時間與資料條件。最後三個狀態都是終止狀態，沒有新操作可以把它們改回前面；同一已成功 commandId 的重試只取回原結果，不算新轉換。
+
+### 圖 6 10 applyOrderCommand 共用命令檢查與提交
 
 ```mermaid
-sequenceDiagram
-autonumber
-actor Student as 學生
-participant UI as 學生網頁
-participant API as 訂單服務
-participant DB as 持久資料庫
-participant Worker as 通知工作程序
-Student->>UI: 確認品項與取餐時段
-UI->>API: POST /order-quotes
-API->>DB: 讀取權限與有效商品價格
-DB-->>API: 商品與選項資料
-API-->>UI: quoteId 與明細及變更提示
-Student->>UI: 明確接受報價並送出
-UI->>API: POST /orders 加 Idempotency-Key
-API->>DB: 查詢或取得送單識別的處理權
-alt 相同 key 且內容不同
-  API-->>UI: 409 IDEMPOTENCY_KEY_REUSED
-else 相同 key 已成功
-  DB-->>API: 原 orderId 與保存結果
-  API-->>UI: 回傳原成立結果
-else 相同 key 已確定失敗
-  DB-->>API: 原業務拒絕結果
-  API-->>UI: 回傳原錯誤 提示修正後建立新操作
-else 同一 key 仍由其他請求處理
-  API-->>UI: 202 PROCESSING 與結果查詢方式
-else 本請求取得處理權
-  API->>DB: 開始交易並鎖定送單識別與必要資源
-  API->>DB: 重新檢查授權商家商品報價時段及庫存
-  alt 價格變動或任一業務條件不符
-    API->>DB: 回滾業務變更並保存明確失敗結果
-    API-->>UI: 錯誤與修正資訊 不建立訂單
-  else 所有條件成立
-    API->>DB: 建立資源保留與訂單快照及事件
-    API->>DB: 保存送單成功結果並一併提交
-    DB-->>API: 提交成功
-    API-->>UI: 201 訂單編號及待確認狀態
-    Worker->>DB: 讀取已提交事件
-    Worker->>DB: 建立需要的通知或供新單提示查詢
-  end
-end
-opt 回應遺失或網路中斷
-  UI->>API: 以相同 key 查詢或重試
-  API-->>UI: 已保存的結果或仍在處理
-end
+flowchart TD
+  A["acceptOrder() / markOrderReady()<br/>cancelStudentOrder() / rejectOrCancelMerchantOrder()<br/>completePickup() / markUncollected()"] --> CMD["applyOrderCommand(actor, orderId, commandId, expectedVersion, action, input)"]
+  CMD --> AUTH["requireActiveAuthenticatedActor()<br/>lockOrderWithinAuthorizedScope()"]
+  AUTH --> ALLOW{"身分有效且可操作此訂單？"}
+  ALLOW -->|否| DENY["拒絕 不變更訂單"]
+  ALLOW -->|是| OLD{"findCommandResult()<br/>同 commandId 已有成功結果？"}
+  OLD -->|是| MATCH{"requireSameCommandPayload()<br/>命令內容與原操作相同？"}
+  MATCH -->|是| REPLAY["回傳保存結果<br/>不新增事件與資源異動"]
+  MATCH -->|否| CONFLICT["命令識別重用錯誤<br/>不得覆蓋原結果"]
+  OLD -->|否| RULES["requireVersion()<br/>requireAllowedActorAndTransition()<br/>依動作檢查原因 取餐碼 交付及時間"]
+  RULES --> VALID{"所有條件通過？"}
+  VALID -->|否| ERROR["VERSION_CONFLICT 或對應業務錯誤<br/>維持原狀態"]
+  VALID -->|是| EFFECT["applyOrderResourceEffects()<br/>依圖 6 11 處理資源"]
+  EFFECT --> WRITE["updateStateAndIncrementVersion()<br/>appendOrderEventAndAudit()<br/>appendNotificationOutboxIfRequired()<br/>saveCommandResult()"]
+  WRITE --> COMMIT["commitTransaction()<br/>狀態 資源 事件 命令結果一起提交"]
+  COMMIT --> OK["回傳新狀態與 version<br/>畫面更新可用操作"]
 ```
 
-新單提示不必發送學生通知；是否新增站內通知事件及收件角色依 B-10。只有已提交的事件可被背景工作程序讀取。若交易提交結果不明，屬系統不確定結果，不能走「明確業務失敗」分支，須保留同 key 查核。
+**圖解說明：**先查既有 commandId 的成功結果，再檢查新操作的 expectedVersion，才能讓成功操作的重播正常取回結果。否則原操作已把版本從 1 改成 2，重送版本 1 就會被誤報成失敗。即使重播也須先驗證當前帳號及資料權限。
 
-## 6.5 接單與學生取消競爭循序圖
+取得命令處理權、訂單鎖與後續寫入應在一致交易策略內。圖中任何失敗都須結束或回滾尚未完成的交易；`applyOrderResourceEffects()` 或事件寫入失敗時，不能保留部分狀態變更。提交結果不明仍沿用原 commandId 查核，不直接發出新的狀態命令。
 
-本圖對應 FR-016 至 FR-018。兩個請求對同一版本的訂單競爭時，只有一方可以成功變更；後完成的請求必須依新狀態處理，而非覆蓋前一個結果。
+### 圖 6 11 applyOrderResourceEffects 依動作處理原保留
+
+```mermaid
+flowchart TD
+  A["applyOrderResourceEffects(order, beforeState, action)"] --> ACT{"此次合法動作？"}
+  ACT -->|ACCEPT| USE["convertInventoryReservationsToConsumedWithoutSecondDeduction()<br/>保留轉耗用 不再扣可用庫存"]
+  ACT -->|STUDENT_CANCEL 或 REJECT| CANCEL["applyCancellationResources()<br/>beforeState 必為待確認"]
+  CANCEL --> RELEASE["releaseOriginalReservedInventoryAndSlotExactlyOnce()<br/>只釋回原保留且只生效一次"]
+  ACT -->|MERCHANT_CANCEL| POST["applyCancellationResources()<br/>beforeState 為製作中或可取餐"]
+  POST --> NORESTORE["doNotRestoreConsumedInventory()<br/>不自動補回已耗用庫存"]
+  NORESTORE --> POLICY["applyApprovedPostAcceptanceSlotPolicy()<br/>時段釋回依 B-09 核定政策"]
+  ACT -->|READY| READY["只更新備妥狀態與時間<br/>不新增資源占用或補回庫存"]
+  ACT -->|COMPLETE 或 MARK_UNCOLLECTED| NONE["不自動補回已耗用庫存<br/>不得重複占用時段"]
+  NONE --> OTHER["完成或未取的時段處理依 B-09<br/>不可自行套用接單前釋回規則"]
+  USE --> DONE
+  RELEASE --> DONE
+  POLICY --> DONE
+  OTHER --> DONE
+  READY --> DONE
+  DONE["回傳資源處理結果<br/>由外層交易一起提交"]
+```
+
+**圖解說明：**`beforeState` 是變更前狀態，必須先保存；不能先把訂單改為 CANCELLED，再猜測有沒有接單。接單前取消與拒單釋回原保留；接單後取消維持耗用，不自動補庫存。`applyCancellationResources()` 為 FR-018 的內部 function，具體釋回使用原 Reservation 紀錄和條件更新，防止重試補回兩次。
+
+本圖假設角色與狀態已通過圖 6 10 檢查，不能單獨暴露為前端資源操作 API。B-09 尚未決議的分支須在正式實作前定案，不以「預設全部釋回」或「預設全部不釋回」取代核定。
+
+### 圖 6 12 acceptOrder 與 cancelStudentOrder 的競爭
 
 ```mermaid
 sequenceDiagram
 autonumber
 actor Student as 學生
 actor Merchant as 商家
-participant Service as 訂單狀態服務
-participant DB as 持久資料庫
-par 同時提交
-  Student->>Service: cancel 訂單版本 1
+participant Service as 訂單服務
+participant DB as 訂單與資源資料
+par 同時操作版本 1 的待確認訂單
+  Student->>Service: cancelStudentOrder(orderId, expectedVersion=1)
 and
-  Merchant->>Service: accept 訂單版本 1
+  Merchant->>Service: acceptOrder(orderId, expectedVersion=1)
 end
-alt 取消先取得鎖並成功提交
-  Service->>DB: 檢查仍為 PENDING_ACCEPTANCE 且版本 1
-  Service->>DB: 改 CANCELLED 釋回保留 寫事件並提交版本 2
+alt 取消先合法提交
+  Service->>DB: applyOrderCommand(STUDENT_CANCEL)
+  Service->>DB: applyCancellationResources()
+  Service->>DB: 提交 CANCELLED 資源釋回與版本 2
   Service-->>Student: 取消成功
-  Service->>DB: 接單條件更新要求版本 1
-  DB-->>Service: 不符合條件 目前已取消且版本 2
+  Service->>DB: applyOrderCommand(ACCEPT) 檢查版本與狀態
+  DB-->>Service: 目前 CANCELLED 版本 2
   Service-->>Merchant: VERSION_CONFLICT 或非法狀態
-else 接單先取得鎖並成功提交
-  Service->>DB: 檢查仍為 PENDING_ACCEPTANCE 且版本 1
-  Service->>DB: 改 PREPARING 保留轉耗用 寫事件並提交版本 2
+else 接單先合法提交
+  Service->>DB: applyOrderCommand(ACCEPT)
+  Service->>DB: convertInventoryReservationsToConsumedWithoutSecondDeduction()
+  Service->>DB: 提交 PREPARING 與版本 2
   Service-->>Merchant: 接單成功
-  Service->>DB: 學生取消要求版本 1 及待確認狀態
-  DB-->>Service: 不符合條件 目前製作中且版本 2
+  Service->>DB: applyOrderCommand(STUDENT_CANCEL) 檢查版本與狀態
+  DB-->>Service: 目前 PREPARING 版本 2
   Service-->>Student: VERSION_CONFLICT 或不允許取消
 end
-Note over Service,DB: 狀態 資源 事件與操作結果在同一交易一致提交
 ```
 
-序號 1、2 僅為測試版本範例。實作可使用列鎖或樂觀版本控制，不要求同時採用兩套方式；若重試同一已成功的 commandId，應回傳保存結果，避免因版本已增加而把先前成功誤報為失敗。
+**圖解說明：**哪個請求先抵達畫面或按鈕先被點，不等於哪個先成立；以實際合法提交順序為準。後者不能覆寫前者，學生與商家畫面都應重新取得最新狀態。圖中向 DB 的箭頭表示 function 所需的交易讀寫，不表示資料庫直接執行應用程式 function。
+
+## 6.6 取餐核對與未取處理
+
+**對應需求：**FR-019、FR-020。兩個 function 都只能由所屬商家對可取餐訂單執行，但判斷條件不同。
+
+### 圖 6 13 completePickup 與 markUncollected 的分流
+
+```mermaid
+flowchart TD
+  A["completePickup() 或 markUncollected()<br/>所屬商家發出本次命令"] --> AUTH["applyOrderCommand()<br/>authorize() 檢查權限 版本與目前狀態"]
+  AUTH --> READY{"仍為 READY_FOR_PICKUP 且版本正確？"}
+  READY -->|否| E1["拒絕並重新讀取訂單"]
+  READY -->|是| ACTION{"選擇此次動作"}
+  ACTION -->|completePickup| COMPLETE["讀取 pickupCode 與 handedOver"]
+  COMPLETE --> CODE{"requirePickupCodeMatches()<br/>碼與此訂單吻合？"}
+  CODE -->|否| WRONG["PICKUP_CODE_MISMATCH<br/>維持可取餐"]
+  CODE -->|是| HAND{"handedOver 為 true？<br/>商家確認已實際交付"}
+  HAND -->|否| NOTYET["HANDOVER_REQUIRED<br/>維持可取餐"]
+  HAND -->|是| FIN["updateStateAndIncrementVersion()<br/>一併提交 COMPLETED completedAt 與事件"]
+  ACTION -->|markUncollected| MISS["讀取原 pickupEndAt 與伺服器時間"]
+  MISS --> TIME{"serverClock.now() 大於 pickupEndAt？"}
+  TIME -->|否 包含剛好相等| EARLY["PICKUP_WINDOW_NOT_ENDED<br/>不能標記未取"]
+  TIME -->|是| LOST["updateStateAndIncrementVersion()<br/>一併提交 UNCOLLECTED uncollectedAt 與事件<br/>保留原 readyAt"]
+```
+
+**圖解說明：**本圖只展開尚未成功執行的新命令；相同 commandId 的成功重播，先依圖 6 10 回傳原結果，不再要求訂單仍是可取餐。本圖中的檢查與修改屬同一次 `applyOrderCommand()`，不表示先檢查一次、離開交易後才另外修改。最後提交時仍需保證狀態與版本符合，避免核碼期間另一請求已取消或標記未取。
+
+`completePickup()` 必須同時核對碼及收到商家交付確認，系統不能感測實際交付；`markUncollected()` 則使用伺服器時間，嚴格「超過」時段才可成立。例如結束時間為 12:30:00，剛好 12:30:00 不可標記，12:30:01 才符合時間條件。完成與未取若競爭同一版本，只有一個終止狀態可成功。
+
+## 6.7 訂單查詢與站內通知
+
+**對應需求：**FR-021 至 FR-023。查詢與通知分開：通知提醒發生了什麼，訂單查詢提供目前權威狀態。
+
+| 主要 function | 用途 | 成功輸出 |
+| --- | --- | --- |
+| `listMyOrders()`、`getOrderDetail()` | 學生查本人、商家查所屬訂單 | 訂單列表或快照與目前狀態 |
+| `createNotificationsFromOrderEvent()` | 已提交事件轉成授權收件通知 | 去重後的站內通知 |
+| `listNotifications()` | 查目前使用者可讀通知 | 通知列表與分頁資訊 |
+| `loadMerchantOrderBoard()` | 載入商家未處理訂單及提示 | pendingCount、orders、asOf |
+| `refreshOrderBoard()` | 重新同步或取得增量更新 | 最新狀態；失敗顯示 stale、offline 或 error |
+
+### 圖 6 14 已提交事件與畫面更新循序圖
+
+```mermaid
+sequenceDiagram
+autonumber
+participant Order as 訂單服務
+participant DB as 訂單與持久事件
+participant Worker as 通知工作程序
+participant UI as 學生或商家畫面
+Order->>DB: applyOrderCommand() 提交狀態與事件
+DB-->>Order: 提交成功
+par 更新訂單畫面
+  UI->>Order: getOrderDetail() 或 refreshOrderBoard()
+  Order->>DB: 查詢授權範圍內的目前訂單
+  DB-->>Order: 訂單狀態與 version
+  Order-->>UI: 最新狀態與可用操作
+and 建立站內通知
+  Worker->>DB: readCommittedOrderEvents()
+  DB-->>Worker: 已提交且需要通知的事件
+  Worker->>Worker: createNotificationsFromOrderEvent(event)
+  Worker->>DB: insertNotificationIfAbsent(eventId, recipientId)
+  alt 相同事件已處理
+    DB-->>Worker: 已存在 不重複新增
+  else 新通知
+    DB-->>Worker: 儲存成功
+  end
+end
+UI->>Order: listNotifications()
+Order->>DB: 查詢目前身分可讀通知
+Order-->>UI: 通知列表
+```
+
+**圖解說明：**`readCommittedOrderEvents()` 與 `insertNotificationIfAbsent()` 為內部函式。工作程序重試時以 eventId 與 recipientId 去重，不能因重試再接單、再取消或再占庫存。通知派送失敗可重試，但訂單查詢應仍顯示已提交狀態。新單提示可由商家訂單列表取得，不因此強制新增學生的新單通知；收件角色依 B-10。
+
+網路中斷時，`refreshOrderBoard()` 不可把讀取失敗顯示成「沒有訂單」，也不可宣告狀態操作成功。畫面收到較舊 version 時不得覆蓋較新狀態；恢復連線後重新同步。正常更新速度仍依 NFR-003 的核定目標。
+
+## 6.8 管理查詢統計與稽核
+
+**對應需求：**FR-024 至 FR-026。此類功能依既有資料查詢、計算及追查，不授予修改歷史價格或任意改寫終止狀態的能力。
+
+| 主要 function | 輸入 | 輸出與限制 |
+| --- | --- | --- |
+| `searchOrders()` | actor、商家、日期、狀態及分頁 | 管理範圍內的訂單紀錄；無資料為空列表 |
+| `getOperationalStatistics()` | actor、期間與核定計數定義 | 訂單量、取消量、未取量與商品備餐數量；無財務報表 |
+| `appendAuditEvent()` | 系統辨識的操作者、動作、目標及結果 | 重要異動紀錄；不接受前端假造成功事件 |
+| `searchAuditEvents()` | actor、時間及對象等條件 | 授權可讀的異動紀錄；不回傳秘密資訊 |
+
+### 圖 6 15 管理查詢的共通處理
+
+```mermaid
+flowchart TD
+  A["管理員輸入商家 日期 狀態或紀錄篩選"] --> AUTH{"authorize()<br/>有此功能與資料範圍權限？"}
+  AUTH -->|否| NO["FORBIDDEN 或 RESOURCE_NOT_FOUND"]
+  AUTH -->|是| VALID{"validateQueryFilters()<br/>日期 篩選與分頁合法？"}
+  VALID -->|否| BAD["VALIDATION_ERROR<br/>標示需修正條件"]
+  VALID -->|是| KIND{"此次查詢功能"}
+  KIND -->|訂單| O["searchOrders()<br/>查核定範圍的訂單"]
+  KIND -->|統計| S["getOperationalStatistics()<br/>依核定 definitionVersion 計算"]
+  KIND -->|操作紀錄| L["searchAuditEvents()<br/>查授權可見的異動紀錄"]
+  O --> RESULT
+  S --> RESULT
+  L --> RESULT
+  RESULT{"查詢執行成功？"} -->|否| ERROR["QUERY_FAILED<br/>不得用空列表掩蓋錯誤"]
+  RESULT -->|是| OUT["回傳資料或合法空結果<br/>列表分頁 統計附口徑及 asOf"]
+```
+
+**圖解說明：**`validateQueryFilters()` 是內部函式，查詢中的 merchantId 不能擴大管理員本來的範圍。統計仍需 B-11 確認日期與狀態計數口徑；範例 function 不代表口徑已核定。`appendAuditEvent()` 不在查詢分支中，它由帳號、商家、菜單、訂單的重要異動流程寫入，再由 `searchAuditEvents()` 查閱。
+
+成功業務異動與必要稽核應一致提交；失敗請求紀錄另行標示失敗，不假造成功。稽核更正以追加事件表達，保存與清除依 B-12。功能圖未增加付款、退款、收款狀態或財務對帳功能。
 
 # 7 函式契約與實作設計建議
 
@@ -1345,126 +1666,7 @@ MVP 可先以單一應用程式內的模組分工實作，讓訂單、庫存與�
 | 查詢與統計 | 角色範圍、分頁、狀態查詢及核定統計 | 不提供財務對帳或直接修改訂單資料 |
 | 稽核與運維 | 重要異動紀錄、監控、備份及恢復驗證 | 不儲存驗證憑證或超出必要範圍的個資 |
 
-## 7.4 建立訂單的交易偽程式碼
-
-此流程說明必須守住的一致性邊界，並非可直接上線的程式。資料鎖、deadlock 重試、請求租約及資料庫隔離細節由技術設計補齊；重試不得更換使用者的 idempotency key。
-
-```text
-createOrder(actor, key, input):
-    requireActiveStudent(actor)
-    validateInputShapeAndLimits(input)
-    normalizedInput = normalizeWithoutChangingMeaning(input)
-    requestHash = hash(normalizedInput)
-
-    claim = submissionStore.claim(actor.id, "CREATE_ORDER", key, requestHash)
-    if claim.payloadMismatch: return IDEMPOTENCY_KEY_REUSED
-    if claim.succeeded: return savedCreationResult(claim.orderId)
-    if claim.failed: return savedFailure(claim)
-    if claim.ownedByAnotherActiveAttempt: return PROCESSING
-
-    begin transaction
-        lockSubmissionAndVerifyAttemptOwnership(claim)
-        savepoint businessWork
-        try:
-            recheckActorActiveAndAuthorized(actor)
-            merchant = lockMerchantForOrderValidation(input.merchantId)
-            requireMerchantAcceptingNow(merchant, serverClock.now())
-            slot = lockSlot(input.pickupSlotId)
-            requireSlotBelongsToMerchantAndBookableToday(slot, merchant)
-            products = lockRelevantProductsInStableOrder(input.items)
-            validateAllProductsSelectionsAndPositiveQuantities(products, input.items)
-            requireAllItemsBelongToOneMerchant(products, merchant.id)
-            currentQuote = calculateCurrentPrice(products, input.items)
-            requireAcceptedQuoteMatches(actor, input.acceptedQuoteId, currentQuote)
-
-            needs = aggregateQuantityByProduct(input.items)
-            units = capacityUnits(input, approvedCapacityPolicy)
-            reserveFiniteInventoryConditionally(needs)
-            occupySlotConditionally(slot, units)
-
-            order = insertOrderAndImmutableSnapshots(
-                actor, merchant, slot, currentQuote, PENDING_ACCEPTANCE)
-            insertReservationRecords(order, needs, units)
-            insertOrderEventAndRequiredAudit(order)
-            insertRequiredOutboxEvents(order)
-            markSubmissionSucceeded(claim, order.id, creationResponse(order))
-        catch KnownBusinessRejection as error:
-            rollback to savepoint businessWork
-            markSubmissionFailed(claim, error.code)
-        commit transaction
-
-    return savedSubmissionResult(actor, key)
-```
-
-補充規則：所有資源保留函式都檢查更新筆數，任一筆不足即回滾全部業務變更。報價若已變更，失敗回覆可另提供最新報價，但不得把它當成學生已接受。快照、保留、訂單事件、必要稽核及成功送單結果一起提交，不能拆成多個互不保證的寫入。
-
-只有明確業務拒絕才能標示 FAILED。資料庫斷線、timeout 或提交回應遺失時，應回滾能確定尚未提交的交易，並以持久送單紀錄查核；不得猜測結果。PROCESSING 的處理權應有可恢復機制與 attempt token，恢復者要先取得排他處理權再確認無既有成功訂單，防止兩個工作者各自建立一張。
-
-有限庫存條件更新可表達為以下概念 SQL。這是資料庫無關的邏輯示例，欄位與語法由實際產品調整。
-
-```sql
-UPDATE inventory
-SET available_quantity = available_quantity - :quantity,
-    reserved_quantity = reserved_quantity + :quantity,
-    version = version + 1
-WHERE product_id = :product_id
-  AND mode = 'FINITE'
-  AND available_quantity >= :quantity;
--- 受影響筆數須為 1，否則整個訂單交易回滾。
--- 不限量與售完判斷在同交易的有效商品規則處理。
-
-UPDATE pickup_slot
-SET occupied_units = occupied_units + :units,
-    version = version + 1
-WHERE id = :slot_id
-  AND occupied_units + :units <= capacity;
--- 時段資格須先驗證，筆數不足時不得保留已扣掉的商品庫存。
-```
-
-## 7.5 訂單狀態命令偽程式碼
-
-```text
-applyOrderCommand(actor, orderId, commandId, expectedVersion, action, input):
-    requireActiveAuthenticatedActor(actor)
-    begin transaction
-        merchant = lockRelevantMerchantForPolicyChecks(orderId)
-        order = lockOrderWithinAuthorizedScope(actor, orderId)
-        prior = findCommandResult(actor.id, orderId, commandId)
-        if prior exists:
-            requireSameCommandPayload(prior, action, input, expectedVersion)
-            return prior.result after ending transaction
-
-        requireVersion(order, expectedVersion)
-        beforeState = order.status
-        requireAllowedActorAndTransition(actor, beforeState, action)
-        if action is REJECT or MERCHANT_CANCEL: requireNonblankReason(input)
-        if action is COMPLETE:
-            requirePickupCodeMatches(order, input.pickupCode)
-            require(input.handedOver == true)
-        if action is MARK_UNCOLLECTED:
-            require(serverClock.now() > order.pickupEndAt)
-
-        if action is ACCEPT:
-            convertInventoryReservationsToConsumedWithoutSecondDeduction(order)
-        if action is STUDENT_CANCEL or REJECT:
-            releaseOriginalReservedInventoryAndSlotExactlyOnce(order)
-        if action is MERCHANT_CANCEL:
-            doNotRestoreConsumedInventory(order)
-            applyApprovedPostAcceptanceSlotPolicy(order)
-
-        updateStateAndIncrementVersion(order, targetState(action))
-        appendOrderEventAndAudit(actor, order, beforeState, input)
-        appendNotificationOutboxIfRequired(order, action)
-        saveCommandResult(actor, orderId, commandId, payloadHash, result)
-    commit transaction
-    return result
-```
-
-商家待確認拒單使用 REJECT；MERCHANT_CANCEL 僅處理 PREPARING 或 READY_FOR_PICKUP，避免模糊原狀態。COMPLETED、CANCELLED、UNCOLLECTED 不接受新的狀態命令。對已成功命令的同識別重播回傳原結果，但仍須先驗證目前帳號與資料存取權限。
-
-所有涉及資源的路徑須遵循一致的鎖順序，例如送單／命令紀錄、商家、既有訂單、時段、依 ID 排序的商品庫存；實際共用鎖與排他鎖由資料庫設計決定。不要讓取消先鎖商品再鎖時段、送單卻反向，以增加 deadlock 風險。若採樂觀版本控制，衝突後必須重新驗證整個操作條件。
-
-## 7.6 資料限制與索引建議
+## 7.4 資料限制與索引建議
 
 | 資料 | 建議限制 | 保護的需求 |
 | --- | --- | --- |
@@ -1481,7 +1683,7 @@ applyOrderCommand(actor, orderId, commandId, expectedVersion, action, input):
 
 資料庫限制作為最後防線，仍需應用程式把違反限制轉成可理解的業務錯誤。索引數量應依查詢計畫與負載量測決定，不無差別為每個欄位建索引。不得對取餐碼設定未經 B-07 核定的全系統永久唯一限制。
 
-## 7.7 邊界與競爭測試補充
+## 7.5 邊界與競爭測試補充
 
 以下測試資料僅用於說明驗證方法，不擴充正式容量與效能要求。AC-xxx 是需求驗收情境，TC-xxx 是本版新增的測試設計範例，尚未執行。
 
@@ -1511,7 +1713,7 @@ applyOrderCommand(actor, orderId, commandId, expectedVersion, action, input):
 
 對 B-04 容量單位、B-09 接單後容量釋回、B-11 統計口徑等未決事項，測試案例須待核定後填入確切期望值；不得以實作目前碰巧產生的值當驗收答案。
 
-## 7.8 送單輸入輸出範例
+## 7.6 送單輸入輸出範例
 
 以下為介面契約示例，假設示範 ID 均存在且屬同一商家、商品仍可售、選項合法、報價經本人確認及資源足夠。範例 ID、取餐碼、金額、日期與時間均是測試資料；正式編碼、幣別與時區設定仍依附錄 B。只複製 JSON 格式並不保證實際業務條件成立。
 
@@ -1586,11 +1788,12 @@ FR-001 至 FR-026 均直接對應 PRD 同編號需求，並對應本文件同尾
 | PRD 第 2.3 節 | 第 4.2 節 CAP-001 至 CAP-005 | 核定資料規模與負載測試 |
 | PRD 第 7 節 | 第 2.6 節 | 狀態轉換、終止狀態及資源一致性 |
 | PRD 第 8 節 | 第 3.1 節 | 七類畫面及共通提示行為 |
-| FR-001 至 FR-009 | 第 6.1 節與各 FR 函式規格 | 帳號及商品模型與輸入輸出檢查 |
-| FR-010、FR-014 至 FR-026 | 第 6.2 節 | 訂單快照、保留、操作識別及事件模型 |
-| FR-016 至 FR-020 | 第 6.3、6.5、7.5 節 | 六種訂單狀態及接單取消競爭 |
-| FR-010 至 FR-015 | 第 6.4、7.4、7.8 節 | 報價、送單與重試契約 |
+| FR-001 至 FR-009 | 第 6.1、6.2 節與各 FR 函式規格 | 帳號、商家及商品模型與輸入輸出檢查 |
+| FR-010、FR-014 至 FR-026 | 第 6.4 節圖 6 8 | 訂單快照、保留、操作識別及事件模型 |
+| FR-016 至 FR-020 | 第 6.5、6.6、7.5 節 | 六種訂單狀態、取消競爭、取餐與未取 |
+| FR-010 至 FR-015 | 第 6.3、6.4、7.4、7.8 節 | 報價、送單與重試契約 |
 | 原 FR 與 NFR 的設計細化 | 第 7.1 至 7.7 節 | TC-001 至 TC-021；未執行，待測試文件展開 |
+| FR-021 至 FR-026 | 第 6.7、6.8 節 | 訂單與通知查詢、管理統計及稽核 |
 
 產品驗收應至少涵蓋以下八項，並保存實際結果、缺陷與核准紀錄。
 
