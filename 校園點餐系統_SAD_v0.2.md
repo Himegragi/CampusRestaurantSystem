@@ -1,6 +1,26 @@
 # 校園點餐系統｜系統架構設計文件
 
-> Software Architecture Design（SAD）｜v0.1｜2026-10-24｜設計審查稿
+> Software Architecture Design（SAD）｜v0.2｜2026-10-24｜設計審查稿
+
+## 圖表索引
+
+本文件採用與 SRS 相同的內嵌 Mermaid 圖表，直接在 Markdown 預覽中顯示。類別、狀態與循序圖使用對應的 UML 表達；角色、部署及模組依賴以補充架構示意呈現，不將一般流程圖稱為正式 UML 圖。
+
+類別圖拆成「帳號與菜單資源」及「訂單與保留」；送單循序圖拆成「請求識別」「核心交易」「通知投遞」。完整規則仍在各章文字與資料表中。
+
+| 圖號 | 圖名 | 圖型 | 對應章節 |
+| --- | --- | --- | --- |
+| 1 | 角色與功能架構圖 | 架構示意 | §2.3 |
+| 2 | 部署架構圖 | 架構示意 | §2.4 |
+| 3 | 模組依賴圖 | 架構示意 | §3.2 |
+| 4 | 帳號、菜單與資源類別圖 | UML 類別圖 | §4.1 |
+| 5 | 訂單、快照與保留類別圖 | UML 類別圖 | §4.1 |
+| 6 | 訂單狀態圖 | UML 狀態圖 | §5.1 |
+| 7 | 送單識別與重播循序圖 | UML 循序圖 | §6.1 |
+| 8 | 建立訂單交易循序圖 | UML 循序圖 | §6.1 |
+| 9 | 通知投遞循序圖 | UML 循序圖 | §6.1 |
+
+各圖另保存為 `SAD_v0.2_diagrams` 中的 `.mmd` 原始檔；本文件內已包含全部圖形定義。
 
 ## 1. 設計依據與適用範圍
 
@@ -47,37 +67,35 @@
 
 本版不以 Redis、Kafka、Kubernetes、搜尋引擎或獨立資料倉儲作為必要相依。後續只有在負載與運維證據支持時才加入；不承諾任何硬體規格可直接達成效能目標。
 
-### 2.3 系統情境圖
+### 2.3 角色與功能架構圖
 
 ```mermaid
-flowchart LR
-    Student[學生：手機瀏覽器] --> System[校園點餐系統]
-    Merchant[商家：桌面瀏覽器] --> System
-    Admin[管理員：桌面瀏覽器] --> System
-    System --> Mail[核定電子郵件服務]
-    Mail --> Student
-    System --> Images[商品圖片儲存]
-    Ops[維運人員] --> Monitor[監控與備份管理]
-    System --> Monitor
+flowchart TB
+  Student["學生"] --> StudentUI["學生介面<br/>登入、菜單、單店購物車<br/>送單、查單、接單前取消"]
+  Merchant["商家人員"] --> MerchantUI["商家介面<br/>菜單、庫存、營業與時段<br/>接單、備餐、核碼交付、未取"]
+  Admin["管理員"] --> AdminUI["管理介面<br/>帳號、商家、訂單查詢<br/>營運統計與操作紀錄"]
+  StudentUI --> Auth["後端身分與資料範圍檢查"]
+  MerchantUI --> Auth
+  AdminUI --> Auth
+  Auth --> App["校園點餐應用<br/>統一執行業務規則"]
+  App --> DB[("訂單、商品、庫存與事件")]
 ```
 
 信任邊界位於瀏覽器與後端、應用與資料儲存、應用與外部郵件服務之間。瀏覽器傳入的角色、金額、時間及資料歸屬均不具權威性。
 
-### 2.4 執行與部署圖
+### 2.4 部署架構示意圖
 
 ```mermaid
 flowchart TB
-    Browser[三角色瀏覽器]
-    Browser -->|HTTPS| Edge[HTTPS 入口與靜態網站]
-    Edge -->|同源 /api/v1| API[API 程序：模組化單體]
-    API -->|交易與權威查詢| DB[(PostgreSQL)]
-    Worker[Worker：通知與恢復] -->|領取 Outbox 與工作租約| DB
-    API -->|驗證郵件| Email[電子郵件服務]
-    API -->|驗證與發布| Storage[商品圖片儲存]
-    Browser -->|公開商品圖片| Storage
-    API --> Observe[日誌、指標與告警]
-    Worker --> Observe
-    DB --> Backup[加密備份與復原儲存]
+  Browser["瀏覽器<br/>學生、商家、管理員"] -->|HTTPS| Entry["網站靜態資產與反向代理"]
+  Entry -->|同源 API| API["API 程序<br/>模組化單體"]
+  API -->|本地交易| DB[("PostgreSQL<br/>業務資料、Session、Submission、Outbox")]
+  Worker["Worker 程序<br/>通知與送單恢復"] -->|領取已提交事件| DB
+  API --> Mail["電子郵件服務<br/>身分驗證"]
+  API --> Images["商品圖片儲存"]
+  API -.-> Monitor["日誌、指標與告警"]
+  Worker -.-> Monitor
+  DB --> Backup["加密備份與復原儲存"]
 ```
 
 API 與 Worker 可分開增加執行個體，但由同一套版本化程式建置。登入狀態、去重結果、Outbox 及工作租約均保存在共用持久儲存，不依賴單一程序記憶體。
@@ -100,21 +118,20 @@ API 與 Worker 可分開增加執行個體，但由同一套版本化程式建�
 
 Module 的 Interface 包含輸入、輸出、不變條件、可重試錯誤及交易規則；不只是函式名稱。可改變實作的位置稱為 Seam，滿足該契約的具體整合稱為 Adapter。Email Adapter 可用正式供應商或測試收件器；Clock 可用正式時間或固定測試時間。庫存並行測試仍須使用真正的 PostgreSQL，不能用記憶體替身宣稱已證明資料庫交易正確。
 
-### 3.2 依賴規則
+### 3.2 模組依賴圖與依賴規則
 
 ```mermaid
-flowchart TD
-    HTTP[HTTP Controller 與輸入驗證] --> Identity[Identity]
-    HTTP --> Orders[Orders]
-    HTTP --> Query[AdministrationQuery]
-    Orders --> Merchant[Merchant]
-    Orders --> Quote[CartQuote]
-    Quote --> Catalog[Catalog]
-    Orders --> Resources[Resources]
-    Orders --> Audit[Audit]
-    Orders --> Outbox[Outbox 寫入]
-    Worker[Worker] --> Notifications[Notifications]
-    Notifications --> Outbox
+flowchart TB
+  HTTP["HTTP Controller<br/>輸入驗證與路由"] --> Identity["Identity<br/>身分、角色與資料範圍"]
+  HTTP --> Orders["Orders<br/>建單、命令、交易與去重"]
+  HTTP --> Query["AdministrationQuery<br/>授權查詢與營運統計"]
+  Orders --> Merchant["Merchant<br/>營業與接單資格"]
+  Orders --> Quote["CartQuote<br/>報價與確認內容"]
+  Quote --> Catalog["Catalog<br/>商品與選項版本"]
+  Orders --> Resources["Resources<br/>庫存及時段保留、耗用、釋回"]
+  Orders --> Audit["Audit<br/>同交易操作紀錄"]
+  Orders --> Outbox["Outbox<br/>同交易寫入待投遞事件"]
+  Outbox -.-> Notifications["Worker 與 Notifications<br/>提交後產生站內通知"]
 ```
 
 - Orders 主導交易，Resources 等內部操作接受同一 `TransactionContext`，不能自行提交。
@@ -150,37 +167,124 @@ docs/
 
 ## 4. 資料架構
 
-### 4.1 核心 ER 圖
+### 4.1 UML 領域類別圖
+
+#### 圖 4-1 帳號、菜單與資源
 
 ```mermaid
-erDiagram
-    ACCOUNT ||--o{ SESSION : owns
-    ACCOUNT ||--o{ CART : owns
-    CART ||--o{ CART_ITEM : contains
-    ACCOUNT ||--o{ SUBMISSION : submits
-    SUBMISSION ||--o| ORDERS : creates
-    ACCOUNT ||--o{ ORDERS : places
-    MERCHANT ||--o{ PRODUCT : offers
-    PRODUCT ||--o{ OPTION_GROUP : defines
-    OPTION_GROUP ||--o{ PRODUCT_OPTION : contains
-    PRODUCT ||--|| INVENTORY : has
-    MERCHANT ||--o{ PICKUP_SLOT : schedules
-    MERCHANT ||--o{ ORDERS : receives
-    PICKUP_SLOT ||--o{ ORDERS : allocated_to
-    ACCOUNT ||--o{ QUOTE : requests
-    ORDERS ||--|{ ORDER_ITEM : snapshots
-    ORDER_ITEM ||--o{ ORDER_ITEM_OPTION : snapshots
-    ORDERS ||--o{ INVENTORY_RESERVATION : reserves
-    PRODUCT ||--o{ INVENTORY_RESERVATION : tracks
-    ORDERS ||--|| SLOT_RESERVATION : occupies
-    ORDERS ||--|{ ORDER_EVENT : records
-    ORDERS ||--o{ ORDER_COMMAND : deduplicates
-    ORDER_EVENT ||--o{ OUTBOX_EVENT : produces
-    ORDER_EVENT ||--o{ NOTIFICATION : informs
-    ACCOUNT ||--o{ NOTIFICATION : receives
+classDiagram
+direction TB
+class Account {
+  +UUID id
+  +Role role
+  +AccountStatus status
+}
+class Merchant {
+  +UUID id
+  +Boolean acceptingOrders
+  +Integer version
+}
+class Product {
+  +UUID id
+  +String name
+  +Decimal basePrice
+  +Integer priceVersion
+}
+class OptionGroup {
+  +Integer minSelections
+  +Integer maxSelections
+}
+class ProductOption {
+  +String name
+  +Decimal extraPrice
+}
+class Inventory {
+  +InventoryMode mode
+  +Integer availableQuantity
+  +Integer reservedQuantity
+  +Integer version
+}
+class PickupSlot {
+  +Timestamp startAt
+  +Timestamp endAt
+  +Integer capacity
+  +Integer occupiedUnits
+}
+Merchant "0..1" -- "0..*" Account : 商家帳號歸屬提案
+Merchant "1" -- "0..*" Product : 提供商品
+Product "1" *-- "0..*" OptionGroup : 定義選項群組
+OptionGroup "1" *-- "0..*" ProductOption : 包含選項
+Product "1" *-- "1" Inventory : 庫存設定
+Merchant "1" -- "0..*" PickupSlot : 設定當日時段
 ```
 
-圖中聚焦訂單路徑；帳號權限、商家營業設定、圖片及稽核表詳見下表。`QUOTE` 在訂單中保存引用與確認摘要，歷史顯示仍以 `ORDER_ITEM` 快照為準。
+**圖解說明：**商品擁有選項群組與庫存設定；商家提供商品與當日取餐時段。商家帳號歸屬依 B-02 核定；不限量商品的可用量為空值，有限庫存不可為負，時段占用不可超過容量。
+
+#### 圖 4-2 訂單、快照與資源保留
+
+```mermaid
+classDiagram
+direction TB
+class Submission {
+  +String keyDigest
+  +String payloadHash
+  +SubmissionStatus status
+  +String attemptToken
+}
+class Order {
+  +UUID id
+  +UUID studentId
+  +UUID merchantId
+  +UUID slotId
+  +OrderStatus status
+  +Decimal total
+  +Integer version
+}
+class OrderItem {
+  +UUID sourceProductId
+  +String nameSnapshot
+  +Decimal basePrice
+  +Integer quantity
+  +Decimal lineTotal
+}
+class OrderItemOption {
+  +String nameSnapshot
+  +Decimal extraPrice
+}
+class InventoryReservation {
+  +UUID productId
+  +Integer quantity
+  +ReservationState state
+}
+class SlotReservation {
+  +UUID slotId
+  +Integer units
+  +String policyVersion
+  +SlotReservationState state
+}
+class OrderEvent {
+  +UUID id
+  +Integer orderVersion
+  +Timestamp occurredAt
+  +String reason
+}
+class OrderCommand {
+  +String commandId
+  +String payloadHash
+  +CommandResult result
+}
+Submission "1" -- "0..1" Order : 同次送單至多成立一次
+Order "1" *-- "1..*" OrderItem : 成立時快照
+OrderItem "1" *-- "0..*" OrderItemOption : 選項快照
+Order "1" *-- "0..*" InventoryReservation : 有限庫存保留
+Order "1" *-- "1" SlotReservation : 時段容量占用
+Order "1" *-- "1..*" OrderEvent : 狀態歷程
+Order "1" *-- "0..*" OrderCommand : 狀態命令去重
+```
+
+**圖解說明：**同一 Submission 至多建立一張訂單；訂單組合明細快照、保留、狀態事件與命令結果。圖中的組合關係表示邏輯歸屬，不授權刪除歷史資料。購物車、報價及通知等輔助資料仍依 §4.2。
+
+本圖以 UML 類別、屬性、關聯、多重性及組合表示核心領域模型；不是 ER 資料表圖。各類別的儲存對應及輔助資料表見 §4.2。Order 保存 Quote 的引用與確認摘要，歷史顯示以 OrderItem 快照為準；實際資料清除仍依 B-12。
 
 ### 4.2 主要資料表與欄位
 
@@ -227,21 +331,27 @@ erDiagram
 
 ## 5. 訂單生命週期與資源規則
 
-### 5.1 狀態圖
+### 5.1 UML 訂單狀態圖
 
 ```mermaid
 stateDiagram-v2
-    [*] --> PENDING_ACCEPTANCE: 送單成功
-    PENDING_ACCEPTANCE --> PREPARING: 商家接單
-    PENDING_ACCEPTANCE --> CANCELLED: 學生取消或商家拒單
-    PREPARING --> READY_FOR_PICKUP: 商家標記備妥
-    PREPARING --> CANCELLED: 商家取消並填原因
-    READY_FOR_PICKUP --> CANCELLED: 商家取消並填原因
-    READY_FOR_PICKUP --> COMPLETED: 正確取餐碼且確認交付
-    READY_FOR_PICKUP --> UNCOLLECTED: 商家標記且現在時間超過時段結束
-    COMPLETED --> [*]
-    CANCELLED --> [*]
-    UNCOLLECTED --> [*]
+  state "待商家確認" as PENDING_ACCEPTANCE
+  state "製作中" as PREPARING
+  state "可取餐" as READY_FOR_PICKUP
+  state "已取消" as CANCELLED
+  state "已完成" as COMPLETED
+  state "未取" as UNCOLLECTED
+  [*] --> PENDING_ACCEPTANCE : createOrder()
+  PENDING_ACCEPTANCE --> PREPARING : acceptOrder()
+  PENDING_ACCEPTANCE --> CANCELLED : 學生取消或商家拒單
+  PREPARING --> READY_FOR_PICKUP : markOrderReady()
+  PREPARING --> CANCELLED : 商家取消並填原因
+  READY_FOR_PICKUP --> CANCELLED : 商家取消並填原因
+  READY_FOR_PICKUP --> COMPLETED : 核碼正確且確認已交付
+  READY_FOR_PICKUP --> UNCOLLECTED : 商家標記且已超過時段結束
+  CANCELLED --> [*]
+  COMPLETED --> [*]
+  UNCOLLECTED --> [*]
 ```
 
 `PROCESSING/SUCCEEDED/FAILED` 是送單請求處理狀態，不是訂單狀態。管理員沒有任意修改訂單狀態或代替商家宣告交付的權限。未取後的線下協調不產生系統補領轉換。
@@ -262,37 +372,99 @@ stateDiagram-v2
 
 ## 6. 交易、鎖定與冪等設計
 
-### 6.1 建立訂單流程
+### 6.1 UML 送單與通知循序圖
+
+#### 圖 6-1 同一次送單的識別與結果重播
 
 ```mermaid
 sequenceDiagram
-    actor S as 學生
-    participant UI as 瀏覽器
-    participant API as Orders
-    participant DB as PostgreSQL
-    participant W as Worker
-    S->>UI: 確認明細、報價及時段
-    UI->>API: POST orders，固定 Idempotency-Key
-    API->>DB: 建立或取得 submission 處理權
-    alt 已有成功結果
-        DB-->>API: 原 orderId 與建立結果
-        API-->>UI: 回傳原訂單識別
-    else 取得處理權
-        API->>DB: BEGIN，鎖 submission 與權威資料
-        API->>DB: 重驗授權、商品、報價、庫存與時段
-        alt 條件成立
-            API->>DB: 保留資源、寫快照、事件與 Outbox
-            API->>DB: submission 成功，COMMIT
-            API-->>UI: 201，訂單成立
-            W->>DB: 領取已提交 Outbox
-            W->>DB: 去重建立站內通知
-        else 已知業務拒絕
-            API->>DB: 回滾業務 savepoint，保存失敗結果
-            API->>DB: COMMIT submission 失敗
-            API-->>UI: 業務錯誤，保留購物車
-        end
-    end
+  autonumber
+  actor Student as 學生
+  participant UI as 送單畫面
+  participant Orders as Orders
+  participant Store as Submission 儲存
+  Student->>UI: 確認報價、明細與取餐時段
+  UI->>Orders: createOrder(actor, key, payload)
+  Orders->>Orders: 驗證身分與輸入，計算 payloadHash
+  Orders->>Store: claim(actor, key, payloadHash)
+  alt 同 key 不同內容
+    Store-->>Orders: payloadMismatch
+    Orders-->>UI: 409 IDEMPOTENCY_KEY_REUSED
+  else 已有成功結果
+    Store-->>Orders: 原 orderId
+    Orders-->>UI: 回原訂單識別，再查目前狀態
+  else 已有已知業務失敗
+    Store-->>Orders: 原業務錯誤
+    Orders-->>UI: 回原失敗結果
+  else 其他有效嘗試處理中
+    Orders-->>UI: 202 PROCESSING，沿原 key 查詢
+  else 本次取得處理權
+    Store-->>Orders: attemptToken
+    Orders->>Orders: 執行建立訂單交易，見下一張圖
+  end
 ```
+
+#### 圖 6-2 訂單與資源的一致提交
+
+```mermaid
+sequenceDiagram
+  autonumber
+  participant UI as 送單畫面
+  participant Orders as Orders
+  participant DB as PostgreSQL
+  Orders->>DB: BEGIN，鎖 submission 並核對 attemptToken
+  Orders->>DB: SAVEPOINT businessWork
+  Orders->>DB: 固定順序鎖帳號、商家、時段、商品與庫存
+  Orders->>Orders: 重驗授權、供應、報價、數量與時段
+  Orders->>DB: 僅在驗證通過時原子保留庫存與容量
+  alt 條件成立且所有資源保留成功
+    Orders->>DB: 建立訂單、快照、取餐碼與保留紀錄
+    Orders->>DB: 寫入事件、稽核、Outbox 與 submission 成功
+    Orders->>DB: COMMIT
+    alt 提交成功已確認
+      DB-->>Orders: 提交成功
+      Orders-->>UI: 201 PENDING_ACCEPTANCE 與 orderId
+    else 提交結果未知或回應遺失
+      Orders-->>UI: 結果待確認，沿原 key 查詢
+    end
+  else 已知業務拒絕或資源不足
+    Orders->>DB: ROLLBACK TO SAVEPOINT businessWork
+    Orders->>DB: 保存已知失敗結果並 COMMIT
+    Orders-->>UI: 業務錯誤，保留購物車
+  else 暫時故障或結果不明
+    Orders->>DB: 回滾可確認未提交的交易
+    Orders-->>UI: 沿原 key 查詢或等待排他恢復
+  end
+  Note over Orders,DB: 訂單、資源、快照及成功結果須一致提交
+```
+
+#### 圖 6-3 提交後的通知投遞
+
+```mermaid
+sequenceDiagram
+  autonumber
+  participant Worker as Worker
+  participant DB as PostgreSQL
+  participant UI as 訂單與通知畫面
+  participant API as 查詢 API
+  Worker->>DB: 領取已提交 Outbox，設定工作租約
+  DB-->>Worker: eventId 與必要資料
+  Worker->>DB: BEGIN，核對租約與處理 token
+  Worker->>DB: 依 eventId 與 recipientId 去重建立通知
+  Worker->>DB: 標記工作完成並 COMMIT
+  alt 寫入成功
+    DB-->>Worker: 提交成功
+  else 當機或結果未知
+    Note over Worker,DB: 租約恢復後重送同事件，不重建訂單
+  end
+  UI->>API: 查詢目前訂單狀態與通知
+  API->>API: 檢查目前帳號與資料範圍
+  API->>DB: 在授權範圍內查詢
+  DB-->>API: 目前資料
+  API-->>UI: 允許顯示的狀態與通知
+```
+
+**圖解說明：**三張圖分別表示請求去重、核心交易與後續通知。通知失敗不重跑建單；提交結果未知時沿用原 key 查詢，恢復者先取得排他處理權。
 
 **D-04：採 `READ COMMITTED`、明確列鎖與條件更新。**購物車與報價階段不保留資源。實際送單步驟如下：
 
