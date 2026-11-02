@@ -1,8 +1,8 @@
 # 校園點餐系統｜查詢與統計模組
 
-> SAD v0.5｜需求基線 SRS v0.6｜設計審查稿
+> SAD v0.6｜2026-11-02｜需求基線 SRS v0.6｜設計採用版（待實作驗證）
 
-[回 SAD 索引](../校園點餐系統_SAD_v0.5.md) · [上一份：通知與工作台模組](./07_通知與工作台_Notifications.md) · [下一份：操作紀錄模組](./09_操作紀錄_Audit.md)
+[回 SAD 索引](../校園點餐系統_SAD_v0.6.md) · [上一份：通知與工作台模組](./07_通知與工作台_Notifications.md) · [下一份：操作紀錄模組](./09_操作紀錄_Audit.md)
 
 負責管理訂單查詢與營運統計；依角色套用可讀範圍，無匯出及財務功能。
 
@@ -25,7 +25,7 @@
 
 計單量先按 orders 主檔計數，商品備餐量另按快照 quantity 加總，不以 join 後明細行數計單。備餐量只含 PREPARING、READY_FOR_PICKUP、COMPLETED、UNCOLLECTED，按 sourceProductId 合併不同選項；取消分類保存 STUDENT／MERCHANT_REJECT／MERCHANT_CANCEL／SYSTEM。各計數與備餐量在同一查詢快照計算，確保 `orderCount = completedCount + cancelledCount + uncollectedCount + activeCount`。個資刪除後重新按現有訂單計算，不以永久彙總保留被刪訂單貢獻。
 
-## 管理查詢共通流程圖
+## 圖 18 管理查詢、統計與稽核查閱
 
 追溯：FR-024～026。
 

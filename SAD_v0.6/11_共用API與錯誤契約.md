@@ -1,10 +1,10 @@
 # 校園點餐系統｜共用 API 與錯誤契約
 
-> SAD v0.5｜需求基線 SRS v0.6｜設計審查稿
+> SAD v0.6｜2026-11-02｜需求基線 SRS v0.6｜設計採用版（待實作驗證）
 
-[回 SAD 索引](../校園點餐系統_SAD_v0.5.md) · [上一份：共用資料架構](./10_共用資料架構.md) · [下一份：前端架構](./12_前端架構.md)
+[回 SAD 索引](../校園點餐系統_SAD_v0.6.md) · [上一份：共用資料架構](./10_共用資料架構.md) · [下一份：前端架構](./12_前端架構.md)
 
-本章定義共用介面契約，欄位限制與政策以 SRS v0.6 為準。函式為設計契約，不代表已有程式實作。主要入口對應 [共用 API 與錯誤契約](./11_共用API與錯誤契約.md) 的 API，內部協作函式不另開公開端點。actor 與 now 由後端提供；tx 表示呼叫端持有的同一資料庫交易，內部函式不得自行提交。
+本章定義共用介面契約，欄位限制與政策以 SRS v0.6 為準。函式為設計契約，不代表已有程式實作。各模組的公開入口對應下方 [端點索引](#端點索引)，內部協作函式不另開公開端點。actor 與 now 由後端提供；tx 表示呼叫端持有的同一資料庫交易，內部函式不得自行提交。
 
 ## HTTP 共通契約
 
@@ -12,13 +12,15 @@
 
 成功回應為 `{data, requestId}`；列表為 `{data:{items,nextCursor},requestId}`。採穩定排序與 cursor，含同時間資料的 ID 次序。`requestId` 用於除錯，`Idempotency-Key` 用於同次送單去重，`commandId` 用於同次狀態命令去重，三者不可混用。
 
+Session 起始效期為學生 24 小時／閒置 30 分鐘、商家 12 小時／閒置 60 分鐘、管理員 8 小時／閒置 15 分鐘，任一先到即失效；詳見 [Session 效期與多裝置策略](./01_身分與帳號_Identity.md#session-效期與多裝置策略)。伺服器回傳必要到期資訊供提示，但實際有效性由後端判斷。
+
 | 類型 | HTTP | 代表 code／行為 |
 | --- | --- | --- |
 | JSON 格式錯誤／欄位非法 | 400／422 | `VALIDATION_ERROR`，保留可修正內容 |
-| 未登入／帳號停用／越權 | 401／403 | `UNAUTHENTICATED`、`ACCOUNT_DISABLED`、`FORBIDDEN` |
+| 未登入／帳號停用／越權 | 401／403 | `UNAUTHENTICATED`、`SESSION_EXPIRED`、`ACCOUNT_DISABLED`、`FORBIDDEN` |
 | 無資源或不在可見範圍 | 404 | `RESOURCE_NOT_FOUND`，不揭露他人資料是否存在 |
 | 條件或版本衝突 | 409 | `QUOTE_CHANGED`、`SLOT_FULL`、`INSUFFICIENT_STOCK`、`VERSION_CONFLICT` |
-| 狀態或取消不合法 | 409 | `INVALID_ORDER_TRANSITION`、`CANCELLATION_NOT_ALLOWED` |
+| 狀態或取消不合法 | 409 | `INVALID_ORDER_TRANSITION`、`CANCELLATION_NOT_ALLOWED`、`ORDER_BUSINESS_DAY_ENDED`；跨日交付回 `PICKUP_CODE_EXPIRED` |
 | 核碼或交付確認失敗 | 422 | `PICKUP_CODE_MISMATCH`、`HANDOVER_REQUIRED` |
 | 尚在處理 | 202 | `PROCESSING`，回傳原操作查詢路徑 |
 | 超過請求頻率 | 429 | `RATE_LIMITED`，提供稍後重試資訊 |
@@ -33,14 +35,15 @@
 
 | 領域 | 端點 | 存取與重點 |
 | --- | --- | --- |
-| 登入 | `POST /auth/email/challenges`、`POST /auth/email/verify`、`POST /auth/logout`、`GET /me` | 受限申請頻率、一次性驗證；登出撤銷 Session |
+| 登入 | `POST /auth/email/challenges`、`POST /auth/email/verify`、`POST /auth/logout`、`POST /auth/session/activity`、`GET /me` | 受限申請頻率、一次性驗證；登出只撤銷目前 Session；activity 僅供明確主動操作，不得自動續期 |
 | 公開菜單 | `GET /merchants`、`GET /merchants/{id}/menu`、`GET /merchants/{id}/pickup-slots` | 僅已公開資料；瀏覽不保證送單可用 |
 | 購物車 | `GET/PUT /cart`、`DELETE /cart` | 本人；跨店替換必須確認；以版本防止舊畫面覆寫 |
-| 報價與送單 | `POST /quotes`、`POST /orders`、`GET /order-submissions/{key}` | 本人；後端計價；建立訂單須 Idempotency-Key |
+| 報價與送單 | `POST /quotes`、`POST /orders`、`GET /order-submissions/{key}` | 本人；後端計價；POST /orders 以 acceptedQuoteId 明確接受報價，須 Idempotency-Key；無獨立確認端點 |
 | 個資刪除 | `DELETE /me`，body 含 `confirmed:true` | 本人學生，全部訂單終止才可執行；見 [身分與帳號模組](./01_身分與帳號_Identity.md) |
 | 命令結果 | `GET /orders/{id}/commands/{commandId}` | 原命令操作者且目前仍可讀該訂單；逾期回 410 |
 | 學生訂單 | `GET /orders`、`GET /orders/{id}`、`POST /orders/{id}/cancel` | 本人；只可取消待確認訂單 |
 | 商家設定 | `PUT /merchant/business-settings`、`POST /merchant/pickup-slots`、`PATCH /merchant/pickup-slots/{id}` | 所屬商家；具版本與容量保護 |
+| 刪除時段 | `DELETE /merchant/pickup-slots/{id}`，帶 expectedVersion | 本店；進行中拒絕，曾使用者封存，從未使用且無引用者實體刪除 |
 | 商品與圖片 | `POST /merchant/products`、`PATCH /merchant/products/{id}`、`PUT /merchant/products/{id}/options`、`POST /merchant/images` | 所屬商家；選項更新同步商品版本 |
 | 庫存 | `PATCH /merchant/products/{id}/inventory` | 不能覆寫保留數量；遵循共用鎖規則 |
 | 接單清單 | `GET /merchant/orders`、`GET /merchant/overview` | 所屬商家；待確認數量與狀態清單 |
@@ -50,7 +53,7 @@
 | 帳號／商家管理 | `POST /admin/accounts`、`PATCH /admin/accounts/{id}/status`、`POST /admin/merchants`、`PATCH /admin/merchants/{id}` | 管理員；商家停用須二次確認並連動帳號與系統取消 |
 | 管理查詢 | `GET /admin/orders`、`GET /admin/statistics`、`GET /admin/audit-events` | 受控查詢；統計含訂單、取消四類、未取、完成、進行中及商品備餐數量 |
 
-商家統計使用 `GET /merchant/statistics`，後端固定所屬商家；管理員查詢可涵蓋全部商家。API 統一採 `/quotes`、`/merchant/products/{id}/options`、`/merchant/overview`，不另保留 v0.4 的 `/order-quotes`、`/option-groups`、`/order-board` 別名。
+商家統計使用 `GET /merchant/statistics`，後端固定所屬商家；管理員查詢可涵蓋全部商家。報價、商品選項與商家總覽的路徑以本節端點索引為準。
 
 ## 輸入型別、錯誤與限流契約
 
@@ -67,6 +70,6 @@
 
 錯誤回應使用 `{error:{code,message,fields?,retryable},requestId}`；fields 只含可修正欄位路徑與理由，不含其他人資料、SQL 或堆疊。`retryable` 只表示同一次操作是否可安全重試，不能解讀為自動產生新 key。未知結果先查原識別；資料變更後須重新確認，才建立新操作。
 
-除 [共用 API 與錯誤契約](./11_共用API與錯誤契約.md) 外補充代碼：`OPTION_RULE_VIOLATION`／422、`CART_MERCHANT_CONFLICT`／409、`PRODUCT_UNAVAILABLE`／409、`MERCHANT_UNAVAILABLE`／409、`SLOT_UNAVAILABLE`／409、`PICKUP_WINDOW_NOT_ENDED`／409、`COMMAND_ID_REUSED`／409、`QUERY_FAILED`／500。畫面保留可修正輸入；409 提示重讀與確認，500 不以空資料或「已回滾」掩蓋未知結果。
+除上方 [HTTP 共通契約](#http-共通契約) 的代表代碼外，另補充：`OPTION_RULE_VIOLATION`／422、`CART_MERCHANT_CONFLICT`／409、`PRODUCT_UNAVAILABLE`／409、`MERCHANT_UNAVAILABLE`／409、`SLOT_UNAVAILABLE`／409、`PICKUP_WINDOW_NOT_ENDED`／409、`COMMAND_ID_REUSED`／409、`QUERY_FAILED`／500。畫面保留可修正輸入；409 提示重讀與確認，500 不以空資料或「已回滾」掩蓋未知結果。
 
 限流的非業務固定值採設計起始值：每 IP 登入申請 30 次／分鐘、驗證 60 次／分鐘；每商家帳號圖片上傳 10 次／分鐘；管理查詢每帳號 60 次／分鐘、同時最多 3 個高成本查詢。共用持久計數器、回 429 與 Retry-After，依負載與濫用測試調整；不得放寬 FR-001 的信箱配額或 FR-019 的逐訂單錯碼鎖定。
