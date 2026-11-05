@@ -182,10 +182,8 @@ SET available_quantity = available_quantity - :q,
     version = version + 1
 WHERE product_id = :product_id
   AND business_date = :order_business_date
-  AND EXISTS (SELECT 1 FROM inventory_policy p
-              WHERE p.product_id = inventory.product_id AND p.mode = 'FINITE')
   AND available_quantity >= :q;
--- 每個有限商品須影響一列；否則整筆業務交易回滾。
+-- 所有商品均為有限庫存，每個商品須影響一列；任一庫存列缺漏或可用量不足，整筆業務交易回滾。
 -- 商品 listed=true 已在同一交易鎖住商品後驗證；此處只處理庫存，不另檢查售完旗標。
 
 UPDATE pickup_slot

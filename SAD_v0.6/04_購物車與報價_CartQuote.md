@@ -20,7 +20,7 @@
 
 | 函式／追溯 | 輸入 | 成功輸出 | 拒絕及一致性處理 |
 | --- | --- | --- | --- |
-| `addCartItem`、`updateCartItem`、`removeCartItem`／FR-011 | 本人購物車、lineId、商品、數量、note | cart、lines、version | 每行 1～20、全單最多 50，note 最多 100 字；0 不是刪除的隱式表示；未知行 `CART_LINE_NOT_FOUND` |
+| `addCartItem`、`updateCartItem`、`removeCartItem`／FR-011 | 本人購物車、lineId、商品、數量、note | cart、lines、version | 每行 1～20、全單最多 50，note 最多 100 字；0 不是刪除的隱式表示；未知行 `CART_LINE_NOT_FOUND`；加入下架商品回 `PRODUCT_UNAVAILABLE`，不因舊菜單曾載入而放行；下架明細仍可移除 |
 | `switchCartMerchant`／FR-011 | targetMerchant、confirmed | 單一新商家購物車 | 未確認 `CART_MERCHANT_CONFLICT`，保留舊內容；先驗證新餐點再原子替換，避免無效新餐點清掉舊草稿 |
 | `calculatePrice`／FR-012 | 後端商品單價及數量 | 每行 unitPrice、subtotal；全單 total、currency=TWD | 每行 subtotal = 商品單價 × 數量，total 為全部小計之和；整數乘加，超範圍拒絕；不得加入折扣、稅費或運費；不採信前端 total |
 | `quoteOrder`／FR-013 | 本人、merchantId、items、previousQuoteId? | quoteId、items、total、changes、requiresConfirmation | 下架回 `PRODUCT_UNAVAILABLE`，有限庫存不足回 `INSUFFICIENT_STOCK`；異動逐行顯示，不能只比總額；報價不占資源 |

@@ -31,8 +31,8 @@
 
 | 函式／追溯 | 輸入 | 成功輸出 | 拒絕及一致性處理 |
 | --- | --- | --- | --- |
-| `adjustInventory`／FR-009 | productId、mode、availableQuantity、dailyDefaultQuantity、expectedVersion | mode、當日 available／reserved／consumed、version | 數量非負整數；不得直接改保留／耗用；模式切換依 [下方「資源處理矩陣與營業日」](#資源處理矩陣與營業日)，衝突 `INVENTORY_MODE_CHANGE_FORBIDDEN` |
-| `ensureDailyInventory`／FR-009 | tx、productId、businessDate | 當日庫存列 | 以唯一鍵建立一次；既有列不可因重試被重設；跨日釋回只更新原列 |
+| `adjustInventory`／FR-009 | productId、availableQuantity、dailyDefaultQuantity、expectedVersion | 當日 available／reserved／consumed、dailyDefaultQuantity、version | 可用量與每日預設量均為必要非負整數；首次設定必填，後續部分更新未提供的欄位維持原值，不接受空值；不得直接改保留／耗用；當日調整與每日預設量生效規則見 [資源處理矩陣與營業日](#資源處理矩陣與營業日) |
+| `ensureDailyInventory`／FR-009 | tx、productId、businessDate | 當日庫存列 | 依必要的每日預設量以唯一鍵建立一次；缺少設定或無法取得當日庫存時不得略過檢查；既有列不可因重試被重設；跨日釋回只更新原列 |
 | `checkAvailability`／FR-009 | 已驗證 items、營業日 | 按商品合計需求與供應判斷 | 同商品跨明細先加總；有限可用量不足回 `INSUFFICIENT_STOCK`；商品上下架由 Catalog 資料檢查，不另管理售完設定 |
 
 ## 交易內資源函式
@@ -40,7 +40,7 @@
 | 函式／追溯 | 輸入 | 成功輸出 | 拒絕及一致性處理 |
 | --- | --- | --- | --- |
 | `reserveOrderResources`／FR-006、009、014 | tx、items、slot、businessDate | 完整 inventoryReservations、slotReservation | 按商品合計庫存，全部 quantity 合計容量；任一失敗回滾全部，沒有公開占資源端點 |
-| `applyCancellationResources`／FR-018 | tx、order、beforeState、原 reservations | releasedInventory、releasedSlotUnits、alreadyApplied | 接單前回原營業日庫存與時段；接單後只退時段；應有的保留缺漏或數量矛盾才回 `RESOURCE_INTEGRITY_ERROR` 並回滾告警；成立時不限量的品項無有限庫存保留屬正常情況 |
+| `applyCancellationResources`／FR-018 | tx、order、beforeState、原 reservations | releasedInventory、releasedSlotUnits、alreadyApplied | 接單前回原營業日庫存與時段；接單後只退時段；每張訂單的每項商品都應有原始庫存保留；保留缺漏或數量矛盾回 `RESOURCE_INTEGRITY_ERROR` 並回滾告警，不得略過該商品 |
 
 ## 資源處理矩陣與營業日
 
@@ -52,7 +52,7 @@
 | 接單後取消 | 不補回已耗用庫存 | 釋回原占用一次 | 原狀態、理由、取消、政策處置及事件 |
 | 完成／未取 | 不補庫存 | 維持原占用，不釋回 | 終止狀態、時間、政策處置及事件 |
 
-不限量商品仍受商品上下架及時段容量限制。庫存模式只有 FINITE（有限庫存）與 UNLIMITED（不限量）；庫存變動不改變商品狀態。**D-03**：按營業日分開保留帳；手動調整只改當日可用量，不覆寫保留或耗用。有限轉不限量時，只要有該商品的待確認訂單就拒絕；不限量轉有限須同時提供可用量與每日預設量，既有不限量訂單不事後扣庫存。
+所有商品統一為有限庫存，不提供庫存模式欄位或模式切換。庫存足夠仍須通過商品上架、商家及時段條件；庫存變動不改變商品狀態。**D-03**：按營業日分開保留帳；手動調整只改當日可用量，不覆寫保留或耗用。每張訂單的每項商品都必須建立庫存保留；不得因庫存列或設定缺漏而略過檢查或保留。
 
 容量需求為全部明細 quantity 的合計；供應與營業檢查依 [商家與營業模組](./02_商家與營業_Merchant.md)。容量調低後既有訂單維持，剩餘顯示 max(0, capacity - occupiedUnits)，禁止新增超額占用。
 

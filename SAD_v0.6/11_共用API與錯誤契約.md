@@ -36,7 +36,7 @@ Session 起始效期為學生 24 小時／閒置 30 分鐘、商家 12 小時／
 | 領域 | 端點 | 存取與重點 |
 | --- | --- | --- |
 | 登入 | `POST /auth/email/challenges`、`POST /auth/email/verify`、`POST /auth/logout`、`POST /auth/session/activity`、`GET /me` | 受限申請頻率、一次性驗證；登出只撤銷目前 Session；activity 僅供明確主動操作，不得自動續期 |
-| 公開菜單 | `GET /merchants`、`GET /merchants/{id}/menu`、`GET /merchants/{id}/pickup-slots` | 僅已公開資料；瀏覽不保證送單可用 |
+| 公開菜單 | `GET /merchants`、`GET /merchants/{id}/menu`、`GET /merchants/{id}/pickup-slots` | 僅已公開資料；menu 在後端以 listed=true 篩選，只回上架商品，下架商品隱藏；瀏覽不保證送單可用 |
 | 購物車 | `GET/PUT /cart`、`DELETE /cart` | 本人；跨店替換必須確認；以版本防止舊畫面覆寫 |
 | 報價與送單 | `POST /quotes`、`POST /orders`、`GET /order-submissions/{key}` | 本人；後端計價；POST /orders 以 acceptedQuoteId 明確接受報價，須 Idempotency-Key；無獨立確認端點 |
 | 個資刪除 | `DELETE /me`，body 含 `confirmed:true` | 本人學生，全部訂單終止才可執行；見 [身分與帳號模組](./01_身分與帳號_Identity.md) |
@@ -44,8 +44,8 @@ Session 起始效期為學生 24 小時／閒置 30 分鐘、商家 12 小時／
 | 學生訂單 | `GET /orders`、`GET /orders/{id}`、`POST /orders/{id}/cancel` | 本人；只可取消待確認訂單 |
 | 商家設定 | `PUT /merchant/business-settings`、`POST /merchant/pickup-slots`、`PATCH /merchant/pickup-slots/{id}` | 所屬商家；具版本與容量保護 |
 | 刪除時段 | `DELETE /merchant/pickup-slots/{id}`，帶 expectedVersion | 本店；進行中拒絕，曾使用者封存，從未使用且無引用者實體刪除 |
-| 商品 | `POST /merchant/products`、`PATCH /merchant/products/{id}` | 所屬商家；只設定 name、unitPrice、listed；修改帶 expectedVersion，回 version |
-| 庫存 | `PATCH /merchant/products/{id}/inventory` | 不能覆寫保留數量；遵循共用鎖規則 |
+| 商品 | `GET /merchant/products`、`POST /merchant/products`、`PATCH /merchant/products/{id}` | 所屬商家；管理清單可讀本店上架與下架商品；只設定 name、unitPrice、listed，修改帶 expectedVersion，回 version |
+| 庫存 | `PATCH /merchant/products/{id}/inventory` | 所有商品有限庫存；設定 availableQuantity 與 dailyDefaultQuantity（必要非負整數）；修改帶 expectedVersion，不能覆寫保留數量；遵循共用鎖規則 |
 | 接單清單 | `GET /merchant/orders`、`GET /merchant/overview` | 所屬商家；待確認數量與狀態清單 |
 | 商家命令 | `POST /merchant/orders/{id}/accept`、`/ready`、`/reject`、`/cancel`、`/complete`、`/uncollected` | 每次帶 commandId、expectedVersion；拒單／取消需原因 |
 | 站內通知 | `GET /notifications` | 目前有權限的本人通知；訂單詳細內容另行驗權 |
