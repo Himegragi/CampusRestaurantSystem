@@ -42,8 +42,8 @@ Session 起始效期為學生 24 小時／閒置 30 分鐘、商家 12 小時／
 | 個資刪除 | `DELETE /me`，body 含 `confirmed:true` | 本人學生，全部訂單終止才可執行；見 [身分與帳號模組](./01_身分與帳號_Identity.md) |
 | 命令結果 | `GET /orders/{id}/commands/{commandId}` | 原命令操作者且目前仍可讀該訂單；逾期回 410 |
 | 學生訂單 | `GET /orders`、`GET /orders/{id}`、`POST /orders/{id}/cancel` | 本人；只可取消待確認訂單 |
-| 商家設定 | `PUT /merchant/business-settings`、`POST /merchant/pickup-slots`、`PATCH /merchant/pickup-slots/{id}` | 所屬商家；具版本與容量保護 |
-| 刪除時段 | `DELETE /merchant/pickup-slots/{id}`，帶 expectedVersion | 本店；進行中拒絕，曾使用者封存，從未使用且無引用者實體刪除 |
+| 商家設定 | `PUT /merchant/business-settings`、`POST /merchant/pickup-slots`、`PATCH /merchant/pickup-slots/{id}` | 所屬商家；具版本保護，容量不得低於已占用份數；預訂截止固定提前 10 分鐘，不提供截止分鐘數設定 |
+| 刪除時段 | `DELETE /merchant/pickup-slots/{id}`，帶 expectedVersion | 本店；曾使用或有任何引用者拒絕，只有從未使用且無引用者可實體刪除；不提供封存操作 |
 | 商品 | `GET /merchant/products`、`POST /merchant/products`、`PATCH /merchant/products/{id}` | 所屬商家；管理清單可讀本店上架與下架商品；只設定 name、unitPrice、listed，修改帶 expectedVersion，回 version |
 | 庫存 | `PATCH /merchant/products/{id}/inventory` | 所有商品有限庫存；設定 availableQuantity 與 dailyDefaultQuantity（必要非負整數）；修改帶 expectedVersion，不能覆寫保留數量；遵循共用鎖規則 |
 | 接單清單 | `GET /merchant/orders`、`GET /merchant/overview` | 所屬商家；待確認數量與狀態清單 |

@@ -25,7 +25,7 @@ stateDiagram-v2
   state "已完成" as COMPLETED
   state "未取" as UNCOLLECTED
   [*] --> PENDING_ACCEPTANCE : createOrder()
-  PENDING_ACCEPTANCE --> PREPARING : 截止前接單
+  PENDING_ACCEPTANCE --> PREPARING : 取餐時段結束前接單
   PENDING_ACCEPTANCE --> CANCELLED : 學生取消、拒單或系統取消
   PREPARING --> READY_FOR_PICKUP : 當日備妥
   PREPARING --> CANCELLED : 商家或系統取消
@@ -39,7 +39,7 @@ stateDiagram-v2
 
 `PROCESSING/SUCCEEDED/FAILED` 是送單請求處理狀態，不是訂單狀態。管理員沒有任意修改訂單狀態或代替商家宣告交付的權限；停用商家觸發 FR-027，由系統身分執行取消。未取後的線下協調不產生系統補領轉換。
 
-圖中「截止前接單」指尚未達訂單保存的取餐時段結束時間；「逾時且未交付」須由商家確認尚未交付，且系統時間嚴格晚於時段結束，不能自動標記未取。詳細條件見下方 [狀態命令、交付與未取](#狀態命令交付與未取)。
+圖中「取餐時段結束前接單」指尚未達商家接單截止時間，亦即訂單保存的取餐時段結束時間；「逾時且未交付」須由商家確認尚未交付，且系統時間嚴格晚於時段結束，不能自動標記未取。詳細條件見下方 [狀態命令、交付與未取](#狀態命令交付與未取)。
 
 ## 自動取消與商家停用協作
 
@@ -47,7 +47,7 @@ stateDiagram-v2
 
 商家停用由應用層 MerchantLifecycle 協調，先顯示受影響數並取得二次確認；確認交易依共用順序鎖住必要帳號、商家及全部受影響訂單，連動帳號失效、Session 撤銷、取消與資源釋回後一起提交。確認 token 綁商家版本與各受影響訂單 ID／version；任一變更時回衝突並顯示最新數量，重新確認。大批交易須量測鎖時間，但不得先回成功再留下未取消訂單。恢復保留設定、設為暫停接單、不復活舊 Session 或已取消訂單。
 
-逾時 Worker 掃描到期的待確認訂單並逐筆呼叫系統命令，恢復後補掃漏執行項。接單入口也在交易內檢查截止時間，已達截止時先落實逾時取消，防止 Worker 延遲讓逾時訂單被接單。與其他命令的競爭依最新狀態與版本處理；系統不自動標記未取。
+逾時 Worker 掃描到期的待確認訂單並逐筆呼叫系統命令，恢復後補掃漏執行項。接單入口也在交易內檢查商家接單截止時間，已達時先落實逾時取消，防止 Worker 延遲讓逾時訂單被接單。與其他命令的競爭依最新狀態與版本處理；系統不自動標記未取。
 
 ## 送單與恢復函式契約
 
@@ -188,11 +188,13 @@ WHERE product_id = :product_id
 
 UPDATE pickup_slot
 SET occupied_units = occupied_units + :units,
+    first_used_at = COALESCE(first_used_at, :server_now),
     version = version + 1
 WHERE id = :slot_id
   AND merchant_id = :merchant_id
   AND occupied_units + :units <= capacity;
--- 必須先在同交易驗證時段資格及鎖定；更新失敗則回滾庫存保留。
+-- 必須先在同交易驗證固定提前 10 分鐘的預訂截止及其他時段資格，再更新占用。
+-- 首次使用時間與訂單同交易提交；更新或後續建單失敗則回滾庫存、占用及本次首次使用標記。
 ```
 
 SQL 為契約示例，不是已建立的 migration；所有參數皆由後端驗證並繫結，不能串接使用者文字。

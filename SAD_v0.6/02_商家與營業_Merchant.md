@@ -20,7 +20,7 @@
 | --- | --- | --- | --- |
 | `createMerchant`、`updateMerchant`／FR-004 | actor、名稱、位置、聯絡與取餐說明；修改帶 expectedVersion | merchant、version | 欄位錯誤、版本衝突；status 變更分派至停用／恢復工作流程，不能用一般欄位更新繞過 [訂單與交易模組](./06_訂單與交易_Orders.md) |
 | `previewMerchantDisable`、`disableMerchant`（應用層 MerchantLifecycle）／FR-004、027 | merchantId；確認請求另帶 confirmed、商家版本與訂單 ID／版本集合摘要 | 預覽 activeOrderCount／confirmationToken；提交後商家與帳號停用、訂單取消結果 | 預覽不鎖定資源；確認時重驗資料，改變則回 `VERSION_CONFLICT` 並要求重新確認；不預設同意 |
-| `updateBusinessSchedule`／FR-005 | weeklyHours、closedDates、acceptingOrders、cutoffMinutes、expectedVersion | 設定、effectiveAccepting、unavailableReason、version | 星期、日期、時間錯誤，跨午夜或重疊拒絕；區段採起含迄不含，24:00 僅作當日結束邊界 |
+| `updateBusinessSchedule`／FR-005 | weeklyHours、closedDates、acceptingOrders、expectedVersion | 設定、effectiveAccepting、unavailableReason、version | 星期、日期、時間錯誤，跨午夜或重疊拒絕；區段採起含迄不含，24:00 僅作當日結束邊界 |
 | `canAcceptOrders`／FR-005 | 商家權威設定、serverNow | boolean、reason | 同時檢查商家啟用、接單開關、例外日與營業區間；前端快取不能當送單依據 |
 
 ## 時段與停用協作
@@ -52,4 +52,4 @@ flowchart TD
   W --> COMMIT["COMMIT，確認成功才更新畫面"]
 ```
 
-每次只更新所選功能。時段可調低容量並保留既有占用，但有進行中訂單不能改起迄或刪除；商品與庫存仍各自檢查 [商品契約](./03_商品_Catalog.md#商品函式契約)及[庫存管理契約](./05_庫存與時段_Resources.md#庫存管理與每日初始化) 的條件。未知提交結果先重讀。
+每次只更新所選功能。時段容量不得低於已占用份數，有進行中訂單不能改起迄，已使用或有引用的時段禁止刪除；商品與庫存仍各自檢查 [商品契約](./03_商品_Catalog.md#商品函式契約)及[庫存管理契約](./05_庫存與時段_Resources.md#庫存管理與每日初始化) 的條件。未知提交結果先重讀。
