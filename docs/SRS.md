@@ -118,7 +118,7 @@ Software Requirements Specification
 
 訂單狀態：待商家確認 `PENDING_ACCEPTANCE`、製作中 `PREPARING`、可取餐 `READY_FOR_PICKUP`、已完成 `COMPLETED`、已取消 `CANCELLED`（含學生取消、商家拒單、商家取消、系統自動取消）、未取 `UNCOLLECTED`。
 
-商品相關用語與 [領域詞彙](./CONTEXT.md) 對齊；欄位名稱、版本與型別對照由 SAD 商品模組定義。
+商品相關用語與 [領域詞彙](../CONTEXT.md) 對齊；欄位名稱、版本與型別對照由 SAD 商品模組定義。
 
 ## 1.5 需求撰寫慣例
 
