@@ -1,6 +1,6 @@
 # 校園點餐系統｜系統架構設計文件
 
-> Software Architecture Design（SAD）｜v0.6｜2026-11-02｜設計採用版（待實作驗證）
+> Software Architecture Design（SAD）｜v0.6｜2026-11-02｜最後修訂 2026-11-09｜設計採用版（待實作驗證）
 
 本文件為 SAD 入口，內容依九個業務模組及共通設計拆成獨立 Markdown 檔。需求基線為 [SRS v0.6](./SRS.md)。系統維持模組化單體架構。
 
