@@ -11,15 +11,3 @@
 | 2026-10-27 | Codex | [EGM 審查與文件流程討論](sessions/2026-10-27_Codex_EGM審查與文件流程討論.md) | 安裝 EGM skills、審查 SAD v0.5、審查人力與標準、文件機械感、Q1～Q7 改寫 |
 | 2026-11-03 | Codex | [SAD v0.6 架構與先備知識問答](sessions/2026-11-05_SAD_v0.6_架構與先備知識問答.md) | Worker、先備知識、去重、訂單狀態、UML 總覽、圖 11 |
 | 2026-11-05 | Codex | [術語對齊與商品、庫存模組精簡](sessions/2026-11-05_Codex_術語對齊與商品庫存模組精簡.md) | PRD/SRS/SAD 術語對齊，精簡 Catalog 與 Resources 模組，commit 與分支 |
-
-## 未另外整理的紀錄
-
-- Claude Code `82f1f2f6`：與 SRS 改寫那段對話（`ce8144de`）的前段相同，是同一段對話的早期分支。
-- Codex `codex-auto-review` 子對話（2026-11-05、11-06、11-09 共三段）：Codex 在執行 commit 前自動判斷是否放行指令的內部紀錄，不是使用者對話。
-
-## 原始紀錄位置
-
-原始紀錄存在整理者的電腦上，其他成員無法直接開啟：
-
-- Claude Code：`C:/Users/User/.claude/projects/d--Projects-CampusRestaurantSystem/*.jsonl`
-- Codex：`C:/Users/User/.codex/sessions/2026/<月>/<日>/rollout-*.jsonl`，以檔案第一行的 `cwd` 判斷是否屬於本專案
