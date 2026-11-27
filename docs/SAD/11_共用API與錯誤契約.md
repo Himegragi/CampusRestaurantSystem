@@ -1,6 +1,6 @@
 # 校園點餐系統｜共用 API 與錯誤契約
 
-> SAD v0.6｜2026-11-02｜最後修訂 2026-11-26｜需求基線 SRS v0.6｜設計採用版（待實作驗證）
+> SAD v0.6｜2026-11-02｜最後修訂 2026-11-27｜需求基線 SRS v0.6｜設計採用版（待實作驗證）
 
 [回 SAD 索引](../SAD.md) · [上一份：共用資料架構](./10_共用資料架構.md) · [下一份：前端架構](./12_前端架構.md)
 
@@ -50,7 +50,7 @@ Session 效期為學生 24 小時／閒置 30 分鐘、商家 12 小時／閒置
 | 商家狀態操作 | `POST /merchant/orders/{id}/accept`、`/ready`、`/reject`、`/cancel`、`/complete`、`/uncollected` | 每次帶 commandId、expectedVersion；拒單／取消需原因 |
 | 站內通知 | `GET /notifications` | 目前有權限的本人通知；訂單詳細內容另行驗權 |
 | 商家停用預覽 | `GET /admin/merchants/{id}/disable-preview` | 回受影響數與確認 token；不產生異動 |
-| 帳號／商家管理 | `POST /admin/accounts`、`PATCH /admin/accounts/{id}/status`、`POST /admin/merchants`、`PATCH /admin/merchants/{id}` | 管理員；商家停用須二次確認並連動帳號與系統取消 |
+| 帳號／商家管理 | `POST /admin/accounts`、`PATCH /admin/accounts/{id}/status`、`POST /admin/merchants`、`PATCH /admin/merchants/{id}` | 管理員；商家停用須帶預覽取得的 confirmationToken 二次確認，並連動帳號與系統取消；商家恢復使用同一端點 |
 | 管理查詢 | `GET /admin/orders`、`GET /admin/statistics`、`GET /admin/audit-events` | 受控查詢；統計含訂單、取消四類、未取、完成、進行中及商品備餐數量 |
 
 商家統計使用 `GET /merchant/statistics`，後端固定所屬商家；管理員查詢可涵蓋全部商家。報價、商品管理與商家總覽的路徑以本節端點索引為準。
@@ -74,4 +74,4 @@ Session 效期為學生 24 小時／閒置 30 分鐘、商家 12 小時／閒置
 
 除上方 [HTTP 共通契約](#http-共通契約) 的代表代碼外，另補充：`CART_MERCHANT_CONFLICT`／409、`PRODUCT_UNAVAILABLE`／409、`MERCHANT_UNAVAILABLE`／409、`SLOT_UNAVAILABLE`／409、`PICKUP_WINDOW_NOT_ENDED`／409、`COMMAND_ID_REUSED`／409、`QUERY_FAILED`／500。畫面保留可修正輸入；409 提示重讀與確認，500 不以空資料或「已回滾」掩蓋未知結果。
 
-限流採下列 SAD 設計值：每 IP 登入申請 300 次／分鐘、驗證碼核對 600 次／分鐘（校園網路多人共用對外 IP，濫用主要由 FR-001 信箱配額與錯碼鎖定擋住，IP 限流只防大量自動化請求）；管理查詢與統計端點（`GET /admin/orders`、`GET /admin/statistics`、`GET /admin/audit-events`、`GET /merchant/statistics`）每帳號 60 次／分鐘，不另設並行上限。共用持久計數器、回 429 與 Retry-After；依壓測或濫用測試調整時，由技術負責人記入 SAD 修訂紀錄，不需需求核准。不得放寬 FR-001 的信箱配額或 FR-019 的逐訂單錯碼鎖定。
+限流採下列 SAD 設計值：每 IP 登入申請 300 次／分鐘、驗證碼核對 600 次／分鐘（校園網路多人共用對外 IP，濫用主要由 FR-001 信箱配額與錯碼鎖定擋住，IP 限流只防大量自動化請求）；管理查詢與統計端點（`GET /admin/orders`、`GET /admin/statistics`、`GET /admin/audit-events`、`GET /merchant/statistics`）每帳號 60 次／分鐘，不另設並行上限。共用持久計數器、回 429 與 Retry-After；依壓測或濫用測試調整時，由技術負責人記入 [SAD 入口〈本版採用內容〉](../SAD.md#本版採用內容)，不需需求核准。不得放寬 FR-001 的信箱配額或 FR-019 的逐訂單錯碼鎖定。

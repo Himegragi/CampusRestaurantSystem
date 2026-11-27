@@ -1,6 +1,6 @@
 # 校園點餐系統｜商家與營業模組
 
-> SAD v0.6｜2026-11-02｜最後修訂 2026-11-26｜需求基線 SRS v0.6｜設計採用版（待實作驗證）
+> SAD v0.6｜2026-11-02｜最後修訂 2026-11-27｜需求基線 SRS v0.6｜設計採用版（待實作驗證）
 
 [回 SAD 索引](../SAD.md) · [上一份：身分與帳號模組](./01_身分與帳號_Identity.md) · [下一份：商品模組](./03_商品_Catalog.md)
 
@@ -13,7 +13,8 @@
 | 函式／追溯 | 輸入 | 成功輸出 | 拒絕及一致性處理 |
 | --- | --- | --- | --- |
 | `createMerchant`、`updateMerchant`／FR-004 | actor、名稱、位置、聯絡與取餐說明；修改帶 expectedVersion | merchant、version | 欄位錯誤、版本衝突；status 變更分派至停用／恢復工作流程，不能用一般欄位更新繞過 [訂單與交易模組](./06_訂單與交易_Orders.md) |
-| `previewMerchantDisable`、`disableMerchant`（應用層 MerchantLifecycle）／FR-004、027 | merchantId；確認請求另帶 confirmed、商家版本與訂單 ID／版本集合摘要 | 預覽 activeOrderCount／confirmationToken；提交後商家與帳號停用、訂單取消結果 | 預覽不鎖定資源；確認時重驗資料，改變則回 `VERSION_CONFLICT` 並要求重新確認；不預設同意 |
+| `previewMerchantDisable`、`disableMerchant`（應用層 MerchantLifecycle）／FR-004、027 | merchantId；確認請求另帶 confirmed 與預覽取得的 confirmationToken | 預覽 activeOrderCount／confirmationToken；提交後商家與帳號停用、訂單取消結果 | 預覽不鎖定資源；確認時以 token 重驗商家版本與訂單 ID／版本集合，改變則回 `VERSION_CONFLICT` 並要求重新確認；不預設同意 |
+| `restoreMerchant`（應用層 MerchantLifecycle）／FR-004 | merchantId、expectedVersion | 商家與帳號恢復、接單狀態為暫停接單、version | 僅停用中的商家可恢復，版本不符回 `VERSION_CONFLICT`；商家、帳號與操作紀錄同交易提交；不恢復舊 Session 或已取消訂單 |
 | `updateBusinessSchedule`／FR-005 | weeklyHours、closedDates、acceptingOrders、expectedVersion | 設定、effectiveAccepting、unavailableReason、version | 星期、日期、時間錯誤，跨午夜或重疊拒絕；區段採起含迄不含，24:00 僅作當日結束邊界 |
 | `canAcceptOrders`／FR-005 | 商家權威設定、serverNow | boolean、reason | 同時檢查商家啟用、接單開關、例外日與營業區間；前端快取不能當送單依據 |
 
