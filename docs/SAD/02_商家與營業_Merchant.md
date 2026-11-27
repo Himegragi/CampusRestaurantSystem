@@ -6,12 +6,6 @@
 
 負責商家資料、營業設定與接單資格。商家停用由應用層 MerchantLifecycle 協調本模組、Identity 與 Orders；時段容量的保存與占用由 Resources 負責。
 
-## 模組責任
-
-| Module | 公開 Interface 範例 | 隱藏的主要實作 | 需求 |
-| --- | --- | --- | --- |
-| Merchant | `createMerchant`、`updateMerchant`、`updateBusinessSchedule`、`canAcceptOrders` | 啟停、營業區間、例外日、接單設定 | FR-004、005 |
-
 完整分工與依賴規則見 [系統架構與模組分工](./00_系統架構與模組分工.md)；資料表見 [共用資料架構](./10_共用資料架構.md)，HTTP 契約見 [共用 API 與錯誤契約](./11_共用API與錯誤契約.md)。
 
 ## 商家與營業函式契約
