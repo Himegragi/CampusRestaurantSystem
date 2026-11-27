@@ -1,6 +1,6 @@
 # 校園點餐系統｜查詢與統計模組
 
-> SAD v0.6｜2026-11-02｜最後修訂 2026-11-05｜需求基線 SRS v0.6｜設計採用版（待實作驗證）
+> SAD v0.6｜2026-11-02｜最後修訂 2026-11-26｜需求基線 SRS v0.6｜設計採用版（待實作驗證）
 
 [回 SAD 索引](../SAD.md) · [上一份：通知與工作台模組](./07_通知與工作台_Notifications.md) · [下一份：操作紀錄模組](./09_操作紀錄_Audit.md)
 
@@ -19,19 +19,19 @@
 | 函式 | 輸入 | 輸出與限制 |
 | --- | --- | --- |
 | `searchOrders` | ADMIN、merchantId?、fromDate、toDate、status?、cursor、limit | items、appliedFilters、nextCursor；管理員涵蓋全部商家，所有篩選取交集，無匯出 |
-| `getOperationalStatistics` | ADMIN 或 MERCHANT、期間、商家條件 | orderCount、cancelledCount 及四種原因分類、uncollectedCount、completedCount、activeCount、preparationQuantities、period、definitionVersion、asOf |
+| `getOperationalStatistics` | ADMIN 或 MERCHANT、期間、商家條件 | orderCount、cancelledCount 及四種原因分類、uncollectedCount、completedCount、activeCount、preparationQuantities、period、asOf |
 
-日期使用營業日，起迄皆含且最多 92 天；SQL 轉為起日 00:00 含、迄日次日 00:00 不含的 Asia/Taipei 時間點，避免漏掉末日。統計預設當日；商家條件由其帳號強制套用，管理員可篩全部或單店。
+日期使用營業日，起迄皆含且最多 92 天；SQL 轉為起日 00:00 含、迄日次日 00:00 不含的 Asia/Taipei 時間點，避免漏掉末日。統計預設當日；商家條件由其帳號強制套用，管理員可篩全部或單一商家。
 
 計單量先按 orders 主檔計數，商品備餐量另按快照 quantity 加總，不以 join 後明細行數計單。備餐量只含 PREPARING、READY_FOR_PICKUP、COMPLETED、UNCOLLECTED，按 sourceProductId 合併同商品的各筆明細；取消分類保存 STUDENT／MERCHANT_REJECT／MERCHANT_CANCEL／SYSTEM。各計數與備餐量在同一查詢快照計算，確保 `orderCount = completedCount + cancelledCount + uncollectedCount + activeCount`。個資刪除後重新按現有訂單計算，不以永久彙總保留被刪訂單貢獻。
 
-## 圖 18 管理查詢、統計與稽核查閱
+## 圖 18 管理查詢、統計與操作紀錄查閱
 
 追溯：FR-024～026。
 
 ```mermaid
 flowchart TD
-  A["輸入日期、商家、狀態或稽核篩選"] --> AUTH{"有效管理員？"}
+  A["輸入日期、商家、狀態或操作紀錄篩選"] --> AUTH{"有效管理員？"}
   AUTH -->|否| DENY["FORBIDDEN"]
   AUTH -->|是| FILTER{"日期、篩選與分頁合法？<br/>起迄皆含，最多九十二天"}
   FILTER -->|否| BAD["VALIDATION_ERROR"]
@@ -46,7 +46,7 @@ flowchart TD
   OK -->|是| RESULT["回資料或合法空結果<br/>分頁、期間與 asOf"]
 ```
 
-本圖為管理員路徑；商家只可使用固定本店範圍的統計端點，不能讀管理訂單或稽核。無匯出及財務功能。查詢成功不新增重要異動紀錄。
+本圖為管理員路徑；商家只可使用固定本商家範圍的統計端點，不能讀管理訂單或操作紀錄。無匯出及財務功能。查詢成功不新增重要異動紀錄。
 
 ## 與操作紀錄協作
 

@@ -1,6 +1,6 @@
 # 校園點餐系統｜共用 API 與錯誤契約
 
-> SAD v0.6｜2026-11-02｜最後修訂 2026-11-06｜需求基線 SRS v0.6｜設計採用版（待實作驗證）
+> SAD v0.6｜2026-11-02｜最後修訂 2026-11-26｜需求基線 SRS v0.6｜設計採用版（待實作驗證）
 
 [回 SAD 索引](../SAD.md) · [上一份：共用資料架構](./10_共用資料架構.md) · [下一份：前端架構](./12_前端架構.md)
 
@@ -8,11 +8,11 @@
 
 ## HTTP 共通契約
 
-**D-05**：路徑前綴 `/api/v1`，Cookie Session 驗證；寫入請求具 CSRF 防護。`actorId`、`studentId` 及商家操作身分由伺服器建立。需並行保護的修改使用 `expectedVersion`；狀態命令使用 `commandId`。
+**D-05**：路徑前綴 `/api/v1`，Cookie Session 驗證；寫入請求具 CSRF 防護。`actorId`、`studentId` 及商家操作身分由伺服器建立。需並行保護的修改使用 `expectedVersion`；訂單狀態操作使用 `commandId`。
 
-成功回應為 `{data, requestId}`；列表為 `{data:{items,nextCursor},requestId}`。採穩定排序與 cursor，含同時間資料的 ID 次序。`requestId` 用於除錯，`Idempotency-Key` 用於同次送單去重，`commandId` 用於同次狀態命令去重，三者不可混用。
+成功回應為 `{data, requestId}`；列表為 `{data:{items,nextCursor},requestId}`。採穩定排序與 cursor，含同時間資料的 ID 次序。`requestId` 用於除錯，`Idempotency-Key` 用於同次送單去重，`commandId` 用於同次訂單狀態操作去重，三者不可混用。
 
-Session 起始效期為學生 24 小時／閒置 30 分鐘、商家 12 小時／閒置 60 分鐘、管理員 8 小時／閒置 15 分鐘，任一先到即失效；詳見 [Session 效期與多裝置策略](./01_身分與帳號_Identity.md#session-效期與多裝置策略)。伺服器回傳必要到期資訊供提示，但實際有效性由後端判斷。
+Session 效期為學生 24 小時／閒置 30 分鐘、商家 12 小時／閒置 60 分鐘、管理員 8 小時／閒置 15 分鐘，任一先到即失效；詳見 [Session 效期與多裝置策略](./01_身分與帳號_Identity.md#session-效期與多裝置策略)。伺服器回傳必要到期資訊供提示，但實際有效性由後端判斷。
 
 | 類型 | HTTP | 代表 code／行為 |
 | --- | --- | --- |
@@ -37,17 +37,17 @@ Session 起始效期為學生 24 小時／閒置 30 分鐘、商家 12 小時／
 | --- | --- | --- |
 | 登入 | `POST /auth/email/challenges`、`POST /auth/email/verify`、`POST /auth/logout`、`POST /auth/session/activity`、`GET /me` | 受限申請頻率、一次性驗證；登出只撤銷目前 Session；activity 僅供明確主動操作，不得自動續期 |
 | 公開菜單 | `GET /merchants`、`GET /merchants/{id}/menu`、`GET /merchants/{id}/pickup-slots` | 僅已公開資料；menu 在後端以 listed=true 篩選，只回上架商品，下架商品隱藏；瀏覽不保證送單可用 |
-| 購物車 | `GET/PUT /cart`、`DELETE /cart` | 本人；跨店替換必須確認；以版本防止舊畫面覆寫 |
+| 購物車 | `GET/PUT /cart`、`DELETE /cart` | 本人；跨商家替換必須確認；以版本防止舊畫面覆寫 |
 | 報價與送單 | `POST /quotes`、`POST /orders`、`GET /order-submissions/{key}` | 本人；後端計價；POST /orders 以 acceptedQuoteId 明確接受報價，須 Idempotency-Key；無獨立確認端點 |
 | 個資刪除 | `DELETE /me`，body 含 `confirmed:true` | 本人學生，全部訂單終止才可執行；見 [身分與帳號模組](./01_身分與帳號_Identity.md) |
-| 命令結果 | `GET /orders/{id}/commands/{commandId}` | 原命令操作者且目前仍可讀該訂單；逾期回 410 |
-| 學生訂單 | `GET /orders`、`GET /orders/{id}`、`POST /orders/{id}/cancel` | 本人；只可取消待確認訂單 |
+| 狀態操作結果 | `GET /orders/{id}/commands/{commandId}` | 原狀態操作的操作者且目前仍可讀該訂單；逾期回 410 |
+| 學生訂單 | `GET /orders`、`GET /orders/{id}`、`POST /orders/{id}/cancel` | 本人；只可取消待商家確認訂單 |
 | 商家設定 | `PUT /merchant/business-settings`、`POST /merchant/pickup-slots`、`PATCH /merchant/pickup-slots/{id}` | 所屬商家；具版本保護，容量不得低於已占用份數；預訂截止固定提前 10 分鐘，不提供截止分鐘數設定 |
-| 刪除時段 | `DELETE /merchant/pickup-slots/{id}`，帶 expectedVersion | 本店；曾使用或有任何引用者拒絕，只有從未使用且無引用者可實體刪除；不提供封存操作 |
-| 商品 | `GET /merchant/products`、`POST /merchant/products`、`PATCH /merchant/products/{id}` | 所屬商家；管理清單可讀本店上架與下架商品；只設定 name、unitPrice、listed，修改帶 expectedVersion，回 version |
+| 刪除時段 | `DELETE /merchant/pickup-slots/{id}`，帶 expectedVersion | 本商家；曾使用或有任何引用者拒絕，只有從未使用且無引用者可實體刪除；不提供封存操作 |
+| 商品 | `GET /merchant/products`、`POST /merchant/products`、`PATCH /merchant/products/{id}` | 所屬商家；管理清單可讀本商家上架與下架商品；只設定 name、unitPrice、listed，修改帶 expectedVersion，回 version |
 | 庫存 | `PATCH /merchant/products/{id}/inventory` | 所有商品有限庫存；設定 availableQuantity 與 dailyDefaultQuantity（必要非負整數）；修改帶 expectedVersion，不能覆寫保留數量；遵循共用鎖規則 |
-| 接單清單 | `GET /merchant/orders`、`GET /merchant/overview` | 所屬商家；待確認數量與狀態清單 |
-| 商家命令 | `POST /merchant/orders/{id}/accept`、`/ready`、`/reject`、`/cancel`、`/complete`、`/uncollected` | 每次帶 commandId、expectedVersion；拒單／取消需原因 |
+| 接單清單 | `GET /merchant/orders`、`GET /merchant/overview` | 所屬商家；待商家確認數量與狀態清單 |
+| 商家狀態操作 | `POST /merchant/orders/{id}/accept`、`/ready`、`/reject`、`/cancel`、`/complete`、`/uncollected` | 每次帶 commandId、expectedVersion；拒單／取消需原因 |
 | 站內通知 | `GET /notifications` | 目前有權限的本人通知；訂單詳細內容另行驗權 |
 | 商家停用預覽 | `GET /admin/merchants/{id}/disable-preview` | 回受影響數與確認 token；不產生異動 |
 | 帳號／商家管理 | `POST /admin/accounts`、`PATCH /admin/accounts/{id}/status`、`POST /admin/merchants`、`PATCH /admin/merchants/{id}` | 管理員；商家停用須二次確認並連動帳號與系統取消 |
@@ -66,7 +66,7 @@ Session 起始效期為學生 24 小時／閒置 30 分鐘、商家 12 小時／
 | Integer／Money | 嚴格整數及範圍檢查，不把字串、小數或溢位值隱式轉成有效輸入；Money 為 TWD 整數元 |
 | Boolean | 只接受 JSON true／false，不接受 0、1 或字串替代 |
 | Date／Time／Timestamp | 真實存在的日期與時間，時間點帶偏移；營業判斷使用伺服器時鐘與 Asia/Taipei |
-| Enum／Array | 未知列舉拒絕；陣列逐項驗證，檢查空集合、重複、混店及整單總份數 |
+| Enum／Array | 未知列舉拒絕；陣列逐項驗證，檢查空集合、重複、混合商家及整單總份數 |
 | PATCH | 缺漏代表不修改；null 只有明確可清除的選填欄位可用，不可清除必填資料；拒絕未定義欄位 |
 | AuthContext | 由 Session 解析；不接受 body 提供的 role、studentId、permissions 作授權依據 |
 
@@ -74,4 +74,4 @@ Session 起始效期為學生 24 小時／閒置 30 分鐘、商家 12 小時／
 
 除上方 [HTTP 共通契約](#http-共通契約) 的代表代碼外，另補充：`CART_MERCHANT_CONFLICT`／409、`PRODUCT_UNAVAILABLE`／409、`MERCHANT_UNAVAILABLE`／409、`SLOT_UNAVAILABLE`／409、`PICKUP_WINDOW_NOT_ENDED`／409、`COMMAND_ID_REUSED`／409、`QUERY_FAILED`／500。畫面保留可修正輸入；409 提示重讀與確認，500 不以空資料或「已回滾」掩蓋未知結果。
 
-限流的非業務固定值採設計起始值：每 IP 登入申請 30 次／分鐘、驗證 60 次／分鐘；管理查詢每帳號 60 次／分鐘、同時最多 3 個高成本查詢。共用持久計數器、回 429 與 Retry-After，依負載與濫用測試調整；不得放寬 FR-001 的信箱配額或 FR-019 的逐訂單錯碼鎖定。
+限流採下列 SAD 設計值：每 IP 登入申請 300 次／分鐘、驗證碼核對 600 次／分鐘（校園網路多人共用對外 IP，濫用主要由 FR-001 信箱配額與錯碼鎖定擋住，IP 限流只防大量自動化請求）；管理查詢與統計端點（`GET /admin/orders`、`GET /admin/statistics`、`GET /admin/audit-events`、`GET /merchant/statistics`）每帳號 60 次／分鐘，不另設並行上限。共用持久計數器、回 429 與 Retry-After；依壓測或濫用測試調整時，由技術負責人記入 SAD 修訂紀錄，不需需求核准。不得放寬 FR-001 的信箱配額或 FR-019 的逐訂單錯碼鎖定。
